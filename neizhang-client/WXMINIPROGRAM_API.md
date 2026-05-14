@@ -1,0 +1,1727 @@
+# 微信小程序客户端 API 列表
+
+本文档依据 [微信小程序 API · 全局索引](https://developers.weixin.qq.com/miniprogram/dev/api/) 左侧导航目录整理，条目层级与站内分类一致。如果文档中没有给出API的具体参数，则查询 [微信小程序 API · 全局索引](https://developers.weixin.qq.com/miniprogram/dev/api/) 
+
+- 文档整理日期：2026-05-12（具体接口行为以官方在线文档为准）。
+- 单项 API 的参数、兼容性、返回值与示例请打开官网对应小节查看。
+
+---
+
+
+## 基础
+
+- wx.env
+- wx.canIUse
+- wx.base64ToArrayBuffer
+- wx.arrayBufferToBase64
+- 系统
+  - wx.openSystemBluetoothSetting
+  - wx.openAppAuthorizeSetting
+  - wx.getWindowInfo
+  - wx.getSystemSetting
+  - wx.getSystemInfoSync
+  - wx.getSystemInfoAsync
+  - wx.getSystemInfo
+  - wx.getSkylineInfoSync
+  - wx.getSkylineInfo
+  - wx.getRendererUserAgent
+  - wx.getDeviceInfo
+  - wx.getDeviceBenchmarkInfo
+  - wx.getAppBaseInfo
+  - wx.getAppAuthorizeSetting
+- 更新
+  - wx.updateWeChatApp
+  - wx.getUpdateManager
+  - UpdateManager
+    - UpdateManager.applyUpdate
+    - UpdateManager.onCheckForUpdate
+    - UpdateManager.onUpdateFailed
+    - UpdateManager.onUpdateReady
+- 小程序
+  - 生命周期
+    - wx.onApiCategoryChange
+    - wx.offApiCategoryChange
+    - wx.getLaunchOptionsSync
+    - wx.getEnterOptionsSync
+    - wx.getApiCategory
+  - 应用级事件
+    - wx.postMessageToReferrerPage
+    - wx.postMessageToReferrerMiniProgram
+    - wx.onUnhandledRejection
+    - wx.onThemeChange
+    - wx.onPageNotFound
+    - wx.onLazyLoadError
+    - wx.onError
+    - wx.onAudioInterruptionEnd
+    - wx.onAudioInterruptionBegin
+    - wx.onAppShow
+    - wx.onAppHide
+    - wx.offUnhandledRejection
+    - wx.offThemeChange
+    - wx.offPageNotFound
+    - wx.offLazyLoadError
+    - wx.offError
+    - wx.offAudioInterruptionEnd
+    - wx.offAudioInterruptionBegin
+    - wx.offAppShow
+    - wx.offAppHide
+  - 路由事件
+    - wx.onBeforePageUnload
+    - wx.onBeforePageLoad
+    - wx.onBeforeAppRoute
+    - wx.onAppRouteDone
+    - wx.onAppRoute
+    - wx.onAfterPageUnload
+    - wx.onAfterPageLoad
+    - wx.offBeforePageUnload
+    - wx.offBeforePageLoad
+    - wx.offBeforeAppRoute
+    - wx.offAppRouteDone
+    - wx.offAppRoute
+    - wx.offAfterPageUnload
+    - wx.offAfterPageLoad
+- 调试
+  - wx.setEnableDebug
+  - wx.getRealtimeLogManager
+  - wx.getLogManager
+  - console
+    - console.debug
+    - console.error
+    - console.group
+    - console.groupEnd
+    - console.info
+    - console.log
+    - console.warn
+  - LogManager
+    - LogManager.debug
+    - LogManager.info
+    - LogManager.log
+    - LogManager.warn
+  - RealtimeLogManager
+    - RealtimeLogManager.addFilterMsg
+    - RealtimeLogManager.error
+    - RealtimeLogManager.getCurrentState
+    - RealtimeLogManager.in
+    - RealtimeLogManager.info
+    - RealtimeLogManager.setFilterMsg
+    - RealtimeLogManager.tag
+    - RealtimeLogManager.warn
+  - RealtimeTagLogManager
+    - RealtimeTagLogManager.addFilterMsg
+    - RealtimeTagLogManager.error
+    - RealtimeTagLogManager.info
+    - RealtimeTagLogManager.setFilterMsg
+    - RealtimeTagLogManager.warn
+- 性能
+  - wx.requestIdleCallback
+  - wx.reportPerformance
+  - wx.preloadWebview
+  - wx.preloadSkylineView
+  - wx.preloadAssets
+  - wx.getPerformance
+  - wx.cancelIdleCallback
+  - EntryList
+    - EntryList.getEntries
+    - EntryList.getEntriesByName
+    - EntryList.getEntriesByType
+  - Performance
+    - Performance.createObserver
+    - Performance.getEntries
+    - Performance.getEntriesByName
+    - Performance.getEntriesByType
+    - Performance.setBufferSize
+  - PerformanceEntry
+  - PerformanceObserver
+    - PerformanceObserver.disconnect
+    - PerformanceObserver.observe
+- 分包加载
+  - wx.preDownloadSubpackage
+  - PreDownloadSubpackageTask
+    - PreDownloadSubpackageTask.onProgressUpdate
+- 加密
+  - wx.getUserCryptoManager
+  - UserCryptoManager
+    - UserCryptoManager.getLatestUserKey
+    - UserCryptoManager.getRandomValues
+
+## 路由
+
+- wx.switchTab
+- wx.rewriteRoute
+- wx.reLaunch
+- wx.redirectTo
+- wx.navigateTo
+- wx.navigateBack
+- EventChannel
+  - EventChannel.emit
+  - EventChannel.off
+  - EventChannel.on
+  - EventChannel.once
+- 自定义路由
+  - wx.router
+  - 基础
+    - router.addRouteBuilder
+    - router.getRouteContext
+    - router.removeRouteBuilder
+
+## 跳转
+
+- wx.restartMiniProgram
+- wx.openOfficialAccountProfile
+- wx.openOfficialAccountChat
+- wx.openOfficialAccountArticle
+- wx.openInquiriesTopic
+- wx.openEmbeddedMiniProgram
+- wx.onEmbeddedMiniProgramHeightChange
+- wx.offEmbeddedMiniProgramHeightChange
+- wx.navigateToMiniProgram
+- wx.navigateBackMiniProgram
+- wx.exitMiniProgram
+
+## 聊天工具
+
+- wx.shareVideoToGroup
+- wx.shareImageToGroup
+- wx.shareFileToGroup
+- wx.shareEmojiToGroup
+- wx.shareAppMessageToGroup
+- wx.selectGroupMembers
+- wx.openChatTool
+- wx.notifyGroupMembers
+- wx.getChatToolInfo
+- wx.enterChatToolMode
+
+## 转发
+
+- wx.updateShareMenu
+- wx.showShareMenu
+- wx.showShareImageMenu
+- wx.shareVideoMessage
+- wx.shareToOfficialAccount
+- wx.shareFileMessage
+- wx.onCopyUrl
+- wx.offCopyUrl
+- wx.hideShareMenu
+- wx.getShareInfo
+- wx.authPrivateMessage
+
+## 界面
+
+- 交互
+  - wx.showToast
+  - wx.showModal
+  - wx.showLoading
+  - wx.showActionSheet
+  - wx.hideToast
+  - wx.hideLoading
+  - wx.enableAlertBeforeUnload
+  - wx.disableAlertBeforeUnload
+- 导航栏
+  - wx.showNavigationBarLoading
+  - wx.setNavigationBarTitle
+  - wx.setNavigationBarColor
+  - wx.hideNavigationBarLoading
+  - wx.hideHomeButton
+- 背景
+  - wx.setBackgroundTextStyle
+  - wx.setBackgroundColor
+- Tab Bar
+  - wx.showTabBarRedDot
+  - wx.showTabBar
+  - wx.setTabBarStyle
+  - wx.setTabBarItem
+  - wx.setTabBarBadge
+  - wx.removeTabBarBadge
+  - wx.hideTabBarRedDot
+  - wx.hideTabBar
+- 字体
+  - wx.loadFontFace
+  - wx.loadBuiltInFontFace
+- 下拉刷新
+  - wx.stopPullDownRefresh
+  - wx.startPullDownRefresh
+- 滚动
+  - wx.pageScrollTo
+  - ScrollViewContext
+    - ScrollViewContext.closeRefresh
+    - ScrollViewContext.closeTwoLevel
+    - ScrollViewContext.scrollIntoView
+    - ScrollViewContext.scrollTo
+    - ScrollViewContext.triggerRefresh
+    - ScrollViewContext.triggerTwoLevel
+- 动画
+  - wx.createAnimation
+  - Animation
+    - Animation.backgroundColor
+    - Animation.bottom
+    - Animation.export
+    - Animation.height
+    - Animation.left
+    - Animation.matrix
+    - Animation.matrix3d
+    - Animation.opacity
+    - Animation.right
+    - Animation.rotate
+    - Animation.rotate3d
+    - Animation.rotateX
+    - Animation.rotateY
+    - Animation.rotateZ
+    - Animation.scale
+    - Animation.scale3d
+    - Animation.scaleX
+    - Animation.scaleY
+    - Animation.scaleZ
+    - Animation.skew
+    - Animation.skewX
+    - Animation.skewY
+    - Animation.step
+    - Animation.top
+    - Animation.translate
+    - Animation.translate3d
+    - Animation.translateX
+    - Animation.translateY
+    - Animation.translateZ
+    - Animation.width
+- 置顶
+  - wx.setTopBarText
+- 自定义组件
+  - wx.nextTick
+- 菜单
+  - wx.onUserTriggerTranslation
+  - wx.onUserOffTranslation
+  - wx.onMenuButtonBoundingClientRectWeightChange
+  - wx.offUserTriggerTranslation
+  - wx.offUserOffTranslation
+  - wx.offMenuButtonBoundingClientRectWeightChange
+  - wx.getMenuButtonBoundingClientRect
+- 窗口
+  - wx.setWindowSize
+  - wx.onWindowStateChange
+  - wx.onWindowResize
+  - wx.onParallelStateChange
+  - wx.offWindowStateChange
+  - wx.offWindowResize
+  - wx.offParallelStateChange
+  - wx.checkIsPictureInPictureActive
+- worklet 动画
+  - wx.worklet
+  - 基础
+    - worklet.cancelAnimation
+    - worklet.derived
+    - worklet.scrollViewContext
+    - worklet.scrollViewContext.scrollTo
+    - worklet.shared
+  - 动画
+    - worklet.decay
+    - worklet.Easing
+    - worklet.spring
+    - worklet.timing
+  - 组合动画
+    - worklet.delay
+    - worklet.repeat
+    - worklet.sequence
+  - 工具函数
+    - worklet.runOnJS
+    - worklet.runOnUI
+
+## 网络
+
+- 发起请求
+  - wx.request
+  - RequestTask
+    - RequestTask.abort
+    - RequestTask.offChunkReceived
+    - RequestTask.offHeadersReceived
+    - RequestTask.onChunkReceived
+    - RequestTask.onHeadersReceived
+- 下载
+  - wx.downloadFile
+  - DownloadTask
+    - DownloadTask.abort
+    - DownloadTask.offHeadersReceived
+    - DownloadTask.offProgressUpdate
+    - DownloadTask.onHeadersReceived
+    - DownloadTask.onProgressUpdate
+- 上传
+  - wx.uploadFile
+  - UploadTask
+    - UploadTask.abort
+    - UploadTask.offHeadersReceived
+    - UploadTask.offProgressUpdate
+    - UploadTask.onHeadersReceived
+    - UploadTask.onProgressUpdate
+- WebSocket
+  - wx.sendSocketMessage
+  - wx.onSocketOpen
+  - wx.onSocketMessage
+  - wx.onSocketError
+  - wx.onSocketClose
+  - wx.connectSocket
+  - wx.closeSocket
+  - SocketTask
+    - SocketTask.close
+    - SocketTask.onClose
+    - SocketTask.onError
+    - SocketTask.onMessage
+    - SocketTask.onOpen
+    - SocketTask.send
+- mDNS
+  - wx.stopLocalServiceDiscovery
+  - wx.startLocalServiceDiscovery
+  - wx.onLocalServiceResolveFail
+  - wx.onLocalServiceLost
+  - wx.onLocalServiceFound
+  - wx.onLocalServiceDiscoveryStop
+  - wx.offLocalServiceResolveFail
+  - wx.offLocalServiceLost
+  - wx.offLocalServiceFound
+  - wx.offLocalServiceDiscoveryStop
+- TCP 通信
+  - wx.createTCPSocket
+  - TCPSocket
+    - TCPSocket.bindWifi
+    - TCPSocket.close
+    - TCPSocket.connect
+    - TCPSocket.offBindWifi
+    - TCPSocket.offClose
+    - TCPSocket.offConnect
+    - TCPSocket.offError
+    - TCPSocket.offMessage
+    - TCPSocket.onBindWifi
+    - TCPSocket.onClose
+    - TCPSocket.onConnect
+    - TCPSocket.onError
+    - TCPSocket.onMessage
+    - TCPSocket.write
+- UDP 通信
+  - wx.createUDPSocket
+  - UDPSocket
+    - UDPSocket.bind
+    - UDPSocket.close
+    - UDPSocket.connect
+    - UDPSocket.offClose
+    - UDPSocket.offError
+    - UDPSocket.offListening
+    - UDPSocket.offMessage
+    - UDPSocket.onClose
+    - UDPSocket.onError
+    - UDPSocket.onListening
+    - UDPSocket.onMessage
+    - UDPSocket.send
+    - UDPSocket.setTTL
+    - UDPSocket.write
+
+## 支付
+
+- wx.requestVirtualPayment
+- wx.requestPluginPayment
+- wx.requestPayment
+- wx.requestMerchantTransfer
+- wx.requestCommonPayment
+- wx.requestAppleSubscribeSign
+- wx.openHKOfflinePayView
+- wx.jumpToOfflinePay
+- wx.createGlobalPayment
+- GlobalPayment
+  - GlobalPayment.abort
+  - GlobalPayment.openMethodPicker
+  - GlobalPayment.requestGlobalPayment
+
+## 数据缓存
+
+- wx.setStorageSync
+- wx.setStorage
+- wx.revokeBufferURL
+- wx.removeStorageSync
+- wx.removeStorage
+- wx.getStorageSync
+- wx.getStorageInfoSync
+- wx.getStorageInfo
+- wx.getStorage
+- wx.createBufferURL
+- wx.clearStorageSync
+- wx.clearStorage
+- wx.batchSetStorageSync
+- wx.batchSetStorage
+- wx.batchGetStorageSync
+- wx.batchGetStorage
+- 数据预拉取和周期性更新
+  - wx.setBackgroundFetchToken
+  - wx.onBackgroundFetchData
+  - wx.getBackgroundFetchToken
+  - wx.getBackgroundFetchData
+- 缓存管理器
+  - wx.createCacheManager
+  - CacheManager
+    - CacheManager.addRule
+    - CacheManager.addRules
+    - CacheManager.clearCaches
+    - CacheManager.clearRules
+    - CacheManager.deleteCache
+    - CacheManager.deleteCaches
+    - CacheManager.deleteRule
+    - CacheManager.deleteRules
+    - CacheManager.match
+    - CacheManager.off
+    - CacheManager.on
+    - CacheManager.start
+    - CacheManager.stop
+
+## 数据分析
+
+- wx.reportMonitor
+- wx.reportEvent
+- wx.reportAnalytics
+- wx.getExptInfoSync
+- wx.getCommonConfig
+
+## 画布
+
+- wx.createOffscreenCanvas
+- wx.createCanvasContext
+- wx.canvasToTempFilePath
+- wx.canvasPutImageData
+- wx.canvasGetImageData
+- Canvas
+  - Canvas.cancelAnimationFrame
+  - Canvas.createImage
+  - Canvas.createImageData
+  - Canvas.createPath2D
+  - Canvas.getContext
+  - Canvas.requestAnimationFrame
+  - Canvas.toDataURL
+- CanvasContext
+  - CanvasContext.arc
+  - CanvasContext.arcTo
+  - CanvasContext.beginPath
+  - CanvasContext.bezierCurveTo
+  - CanvasContext.clearRect
+  - CanvasContext.clip
+  - CanvasContext.closePath
+  - CanvasContext.createCircularGradient
+  - CanvasContext.createLinearGradient
+  - CanvasContext.createPattern
+  - CanvasContext.draw
+  - CanvasContext.drawImage
+  - CanvasContext.fill
+  - CanvasContext.fillRect
+  - CanvasContext.fillText
+  - CanvasContext.lineTo
+  - CanvasContext.measureText
+  - CanvasContext.moveTo
+  - CanvasContext.quadraticCurveTo
+  - CanvasContext.rect
+  - CanvasContext.restore
+  - CanvasContext.rotate
+  - CanvasContext.save
+  - CanvasContext.scale
+  - CanvasContext.setFillStyle
+  - CanvasContext.setFontSize
+  - CanvasContext.setGlobalAlpha
+  - CanvasContext.setLineCap
+  - CanvasContext.setLineDash
+  - CanvasContext.setLineJoin
+  - CanvasContext.setLineWidth
+  - CanvasContext.setMiterLimit
+  - CanvasContext.setShadow
+  - CanvasContext.setStrokeStyle
+  - CanvasContext.setTextAlign
+  - CanvasContext.setTextBaseline
+  - CanvasContext.setTransform
+  - CanvasContext.stroke
+  - CanvasContext.strokeRect
+  - CanvasContext.strokeText
+  - CanvasContext.transform
+  - CanvasContext.translate
+- CanvasGradient
+  - CanvasGradient.addColorStop
+- Color
+- Image
+- ImageData
+- OffscreenCanvas
+  - OffscreenCanvas.createImage
+  - OffscreenCanvas.getContext
+- Path2D
+  - Path2D.addPath
+  - Path2D.arc
+  - Path2D.arcTo
+  - Path2D.bezierCurveTo
+  - Path2D.closePath
+  - Path2D.ellipse
+  - Path2D.lineTo
+  - Path2D.moveTo
+  - Path2D.quadraticCurveTo
+  - Path2D.rect
+- RenderingContext
+
+## 媒体
+
+- 地图
+  - wx.createMapContext
+  - MapContext
+    - MapContext.addArc
+    - MapContext.addCustomLayer
+    - MapContext.addGroundOverlay
+    - MapContext.addMarkers
+    - MapContext.addVisualLayer
+    - MapContext.eraseLines
+    - MapContext.executeVisualLayerCommand
+    - MapContext.fromScreenLocation
+    - MapContext.getCenterLocation
+    - MapContext.getRegion
+    - MapContext.getRotate
+    - MapContext.getScale
+    - MapContext.getSkew
+    - MapContext.includePoints
+    - MapContext.initMarkerCluster
+    - MapContext.moveAlong
+    - MapContext.moveToLocation
+    - MapContext.on
+    - MapContext.openMapApp
+    - MapContext.removeArc
+    - MapContext.removeCustomLayer
+    - MapContext.removeGroundOverlay
+    - MapContext.removeMarkers
+    - MapContext.removeVisualLayer
+    - MapContext.setBoundary
+    - MapContext.setCenterOffset
+    - MapContext.setLocMarkerIcon
+    - MapContext.toScreenLocation
+    - MapContext.translateMarker
+    - MapContext.updateGroundOverlay
+- 图片
+  - wx.saveImageToPhotosAlbum
+  - wx.previewMedia
+  - wx.previewImage
+  - wx.getImageInfo
+  - wx.editImage
+  - wx.cropImage
+  - wx.compressImage
+  - wx.chooseMessageFile
+  - wx.chooseImage
+- 视频
+  - wx.saveVideoToPhotosAlbum
+  - wx.openVideoEditor
+  - wx.getVideoInfo
+  - wx.createVideoContext
+  - wx.compressVideo
+  - wx.chooseVideo
+  - wx.chooseMedia
+  - wx.checkDeviceSupportHevc
+  - VideoContext
+    - VideoContext.exitBackgroundPlayback
+    - VideoContext.exitCasting
+    - VideoContext.exitFullScreen
+    - VideoContext.exitPictureInPicture
+    - VideoContext.hideStatusBar
+    - VideoContext.pause
+    - VideoContext.play
+    - VideoContext.playbackRate
+    - VideoContext.reconnectCasting
+    - VideoContext.requestBackgroundPlayback
+    - VideoContext.requestFullScreen
+    - VideoContext.seek
+    - VideoContext.sendDanmu
+    - VideoContext.showStatusBar
+    - VideoContext.startCasting
+    - VideoContext.stop
+    - VideoContext.switchCasting
+- 音频
+  - wx.stopVoice
+  - wx.setInnerAudioOption
+  - wx.playVoice
+  - wx.pauseVoice
+  - wx.getAvailableAudioSources
+  - wx.createWebAudioContext
+  - wx.createMediaAudioPlayer
+  - wx.createInnerAudioContext
+  - wx.createAudioContext
+  - AudioBuffer
+    - AudioBuffer.copyFromChannel
+    - AudioBuffer.copyToChannel
+    - AudioBuffer.getChannelData
+  - AudioContext
+    - AudioContext.pause
+    - AudioContext.play
+    - AudioContext.seek
+    - AudioContext.setSrc
+  - AudioListener
+  - AudioParam
+  - BufferSourceNode
+    - BufferSourceNode.connect
+    - BufferSourceNode.disconnect
+    - BufferSourceNode.start
+    - BufferSourceNode.stop
+  - InnerAudioContext
+    - InnerAudioContext.destroy
+    - InnerAudioContext.offCanplay
+    - InnerAudioContext.offEnded
+    - InnerAudioContext.offError
+    - InnerAudioContext.offPause
+    - InnerAudioContext.offPlay
+    - InnerAudioContext.offSeeked
+    - InnerAudioContext.offSeeking
+    - InnerAudioContext.offStop
+    - InnerAudioContext.offTimeUpdate
+    - InnerAudioContext.offWaiting
+    - InnerAudioContext.onCanplay
+    - InnerAudioContext.onEnded
+    - InnerAudioContext.onError
+    - InnerAudioContext.onPause
+    - InnerAudioContext.onPlay
+    - InnerAudioContext.onSeeked
+    - InnerAudioContext.onSeeking
+    - InnerAudioContext.onStop
+    - InnerAudioContext.onTimeUpdate
+    - InnerAudioContext.onWaiting
+    - InnerAudioContext.pause
+    - InnerAudioContext.play
+    - InnerAudioContext.seek
+    - InnerAudioContext.stop
+  - MediaAudioPlayer
+    - MediaAudioPlayer.addAudioSource
+    - MediaAudioPlayer.destroy
+    - MediaAudioPlayer.removeAudioSource
+    - MediaAudioPlayer.start
+    - MediaAudioPlayer.stop
+  - WebAudioContext
+    - WebAudioContext.close
+    - WebAudioContext.createAnalyser
+    - WebAudioContext.createBiquadFilter
+    - WebAudioContext.createBuffer
+    - WebAudioContext.createBufferSource
+    - WebAudioContext.createChannelMerger
+    - WebAudioContext.createChannelSplitter
+    - WebAudioContext.createConstantSource
+    - WebAudioContext.createDelay
+    - WebAudioContext.createDynamicsCompressor
+    - WebAudioContext.createGain
+    - WebAudioContext.createIIRFilter
+    - WebAudioContext.createOscillator
+    - WebAudioContext.createPanner
+    - WebAudioContext.createPeriodicWave
+    - WebAudioContext.createScriptProcessor
+    - WebAudioContext.createWaveShaper
+    - WebAudioContext.decodeAudioData
+    - WebAudioContext.resume
+    - WebAudioContext.suspend
+  - WebAudioContextNode
+- 背景音频
+  - wx.stopBackgroundAudio
+  - wx.seekBackgroundAudio
+  - wx.playBackgroundAudio
+  - wx.pauseBackgroundAudio
+  - wx.onBackgroundAudioStop
+  - wx.onBackgroundAudioPlay
+  - wx.onBackgroundAudioPause
+  - wx.getBackgroundAudioPlayerState
+  - wx.getBackgroundAudioManager
+  - BackgroundAudioManager
+    - BackgroundAudioManager.onCanplay
+    - BackgroundAudioManager.onEnded
+    - BackgroundAudioManager.onError
+    - BackgroundAudioManager.onNext
+    - BackgroundAudioManager.onPause
+    - BackgroundAudioManager.onPlay
+    - BackgroundAudioManager.onPrev
+    - BackgroundAudioManager.onSeeked
+    - BackgroundAudioManager.onSeeking
+    - BackgroundAudioManager.onStop
+    - BackgroundAudioManager.onTimeUpdate
+    - BackgroundAudioManager.onWaiting
+    - BackgroundAudioManager.pause
+    - BackgroundAudioManager.play
+    - BackgroundAudioManager.seek
+    - BackgroundAudioManager.stop
+- 实时音视频
+  - wx.createLivePusherContext
+  - wx.createLivePlayerContext
+  - LivePlayerContext
+    - LivePlayerContext.exitBackgroundPlayback
+    - LivePlayerContext.exitCasting
+    - LivePlayerContext.exitFullScreen
+    - LivePlayerContext.exitPictureInPicture
+    - LivePlayerContext.mute
+    - LivePlayerContext.pause
+    - LivePlayerContext.play
+    - LivePlayerContext.reconnectCasting
+    - LivePlayerContext.requestBackgroundPlayback
+    - LivePlayerContext.requestFullScreen
+    - LivePlayerContext.resume
+    - LivePlayerContext.snapshot
+    - LivePlayerContext.startCasting
+    - LivePlayerContext.stop
+    - LivePlayerContext.switchCasting
+  - LivePusherContext
+    - LivePusherContext.applyBlusherStickMakeup
+    - LivePusherContext.applyEyeBrowMakeup
+    - LivePusherContext.applyEyeShadowMakeup
+    - LivePusherContext.applyFaceContourMakeup
+    - LivePusherContext.applyFilter
+    - LivePusherContext.applyLipStickMakeup
+    - LivePusherContext.applySticker
+    - LivePusherContext.clearFilters
+    - LivePusherContext.clearMakeups
+    - LivePusherContext.clearStickers
+    - LivePusherContext.createOffscreenCanvas
+    - LivePusherContext.exitPictureInPicture
+    - LivePusherContext.getMaxZoom
+    - LivePusherContext.onCustomRendererEvent
+    - LivePusherContext.pause
+    - LivePusherContext.pauseBGM
+    - LivePusherContext.playBGM
+    - LivePusherContext.resume
+    - LivePusherContext.resumeBGM
+    - LivePusherContext.sendMessage
+    - LivePusherContext.setBGMVolume
+    - LivePusherContext.setMICVolume
+    - LivePusherContext.setZoom
+    - LivePusherContext.snapshot
+    - LivePusherContext.start
+    - LivePusherContext.startPreview
+    - LivePusherContext.stop
+    - LivePusherContext.stopBGM
+    - LivePusherContext.stopPreview
+    - LivePusherContext.switchCamera
+    - LivePusherContext.toggleTorch
+- 录音
+  - wx.stopRecord
+  - wx.startRecord
+  - wx.getRecorderManager
+  - RecorderManager
+    - RecorderManager.onError
+    - RecorderManager.onFrameRecorded
+    - RecorderManager.onInterruptionBegin
+    - RecorderManager.onInterruptionEnd
+    - RecorderManager.onPause
+    - RecorderManager.onResume
+    - RecorderManager.onStart
+    - RecorderManager.onStop
+    - RecorderManager.pause
+    - RecorderManager.resume
+    - RecorderManager.start
+    - RecorderManager.stop
+- 相机
+  - wx.createCameraContext
+  - CameraContext
+    - CameraContext.onCameraFrame
+    - CameraContext.setZoom
+    - CameraContext.startRecord
+    - CameraContext.stopRecord
+    - CameraContext.takePhoto
+  - CameraFrameListener
+    - CameraFrameListener.start
+    - CameraFrameListener.stop
+- 富文本
+  - EditorContext
+    - EditorContext.blur
+    - EditorContext.clear
+    - EditorContext.deleteText
+    - EditorContext.format
+    - EditorContext.getBounds
+    - EditorContext.getContents
+    - EditorContext.getHistoryState
+    - EditorContext.getSelection
+    - EditorContext.getSelectionText
+    - EditorContext.insertCustomBlock
+    - EditorContext.insertDivider
+    - EditorContext.insertImage
+    - EditorContext.insertText
+    - EditorContext.redo
+    - EditorContext.removeFormat
+    - EditorContext.scrollIntoView
+    - EditorContext.setContents
+    - EditorContext.setSelection
+    - EditorContext.undo
+- 音视频合成
+  - wx.createMediaContainer
+  - MediaContainer
+    - MediaContainer.addTrack
+    - MediaContainer.destroy
+    - MediaContainer.export
+    - MediaContainer.extractDataSource
+    - MediaContainer.removeTrack
+  - MediaTrack
+- 实时语音
+  - wx.updateVoIPChatMuteConfig
+  - wx.subscribeVoIPVideoMembers
+  - wx.setEnable1v1Chat
+  - wx.onVoIPVideoMembersChanged
+  - wx.onVoIPChatStateChanged
+  - wx.onVoIPChatSpeakersChanged
+  - wx.onVoIPChatMembersChanged
+  - wx.onVoIPChatInterrupted
+  - wx.offVoIPVideoMembersChanged
+  - wx.offVoIPChatStateChanged
+  - wx.offVoIPChatSpeakersChanged
+  - wx.offVoIPChatMembersChanged
+  - wx.offVoIPChatInterrupted
+  - wx.joinVoIPChat
+  - wx.join1v1Chat
+  - wx.exitVoIPChat
+- 画面录制器
+  - wx.createMediaRecorder
+  - MediaRecorder
+    - MediaRecorder.destroy
+    - MediaRecorder.off
+    - MediaRecorder.on
+    - MediaRecorder.pause
+    - MediaRecorder.requestFrame
+    - MediaRecorder.resume
+    - MediaRecorder.start
+    - MediaRecorder.stop
+- 视频解码器
+  - wx.createVideoDecoder
+  - VideoDecoder
+    - VideoDecoder.getFrameData
+    - VideoDecoder.off
+    - VideoDecoder.on
+    - VideoDecoder.remove
+    - VideoDecoder.seek
+    - VideoDecoder.start
+    - VideoDecoder.stop
+
+## 位置
+
+- wx.stopLocationUpdate
+- wx.startLocationUpdateBackground
+- wx.startLocationUpdate
+- wx.openLocation
+- wx.onLocationChangeError
+- wx.onLocationChange
+- wx.offLocationChangeError
+- wx.offLocationChange
+- wx.getLocation
+- wx.getFuzzyLocation
+- wx.choosePoi
+- wx.chooseLocation
+
+## 文件
+
+- wx.saveFileToDisk
+- wx.openDocument
+- wx.getFileSystemManager
+- FileStats
+- FileSystemManager
+  - FileSystemManager.access
+  - FileSystemManager.accessSync
+  - FileSystemManager.appendFile
+  - FileSystemManager.appendFileSync
+  - FileSystemManager.close
+  - FileSystemManager.closeSync
+  - FileSystemManager.copyFile
+  - FileSystemManager.copyFileSync
+  - FileSystemManager.fstat
+  - FileSystemManager.fstatSync
+  - FileSystemManager.ftruncate
+  - FileSystemManager.ftruncateSync
+  - FileSystemManager.getFileInfo
+  - FileSystemManager.getSavedFileList
+  - FileSystemManager.mkdir
+  - FileSystemManager.mkdirSync
+  - FileSystemManager.open
+  - FileSystemManager.openSync
+  - FileSystemManager.read
+  - FileSystemManager.readCompressedFile
+  - FileSystemManager.readCompressedFileSync
+  - FileSystemManager.readdir
+  - FileSystemManager.readdirSync
+  - FileSystemManager.readFile
+  - FileSystemManager.readFileSync
+  - FileSystemManager.readSync
+  - FileSystemManager.readZipEntry
+  - FileSystemManager.removeSavedFile
+  - FileSystemManager.rename
+  - FileSystemManager.renameSync
+  - FileSystemManager.rmdir
+  - FileSystemManager.rmdirSync
+  - FileSystemManager.saveFile
+  - FileSystemManager.saveFileSync
+  - FileSystemManager.stat
+  - FileSystemManager.statSync
+  - FileSystemManager.truncate
+  - FileSystemManager.truncateSync
+  - FileSystemManager.unlink
+  - FileSystemManager.unlinkSync
+  - FileSystemManager.unzip
+  - FileSystemManager.write
+  - FileSystemManager.writeFile
+  - FileSystemManager.writeFileSync
+  - FileSystemManager.writeSync
+- ReadResult
+- Stats
+  - Stats.isDirectory
+  - Stats.isFile
+- WriteResult
+
+## 开放接口
+
+- 登录
+  - wx.pluginLogin
+  - wx.login
+  - wx.checkSession
+- 账号信息
+  - wx.getAccountInfoSync
+- 用户信息
+  - wx.getUserProfile
+  - wx.getUserInfo
+  - UserInfo
+- 授权
+  - wx.authorizeForMiniProgram
+  - wx.authorize
+- 设置
+  - wx.openSetting
+  - wx.getSetting
+  - AuthSetting
+  - SubscriptionsSetting
+- 收货地址
+  - wx.chooseAddress
+- 卡券
+  - wx.openCard
+  - wx.addCard
+- 发票
+  - wx.chooseInvoiceTitle
+  - wx.chooseInvoice
+- 生物认证
+  - wx.startSoterAuthentication
+  - wx.checkIsSupportSoterAuthentication
+  - wx.checkIsSoterEnrolledInDevice
+- 微信运动
+  - wx.shareToWeRun
+  - wx.getWeRunData
+- 订阅消息
+  - wx.requestSubscribeMessage
+  - wx.requestSubscribeDeviceMessage
+- 微信红包
+  - wx.showRedPackage
+- 微信小店
+  - wx.openStoreOrderDetail
+  - wx.openStoreCouponDetail
+- 收藏
+  - wx.addVideoToFavorites
+  - wx.addFileToFavorites
+- 用工关系
+  - wx.requestSubscribeEmployeeMessage
+  - wx.checkEmployeeRelation
+  - wx.bindEmployeeRelation
+- 我的小程序
+  - wx.checkIsAddedToMyMiniProgram
+- 人脸检测
+  - wx.requestFacialVerify
+  - wx.checkIsSupportFacialRecognition
+- 车牌
+  - wx.chooseLicensePlate
+- 视频号
+  - wx.reserveChannelsLive
+  - wx.openChannelsUserProfile
+  - wx.openChannelsLiveNoticeInfo
+  - wx.openChannelsLive
+  - wx.openChannelsEvent
+  - wx.openChannelsActivity
+  - wx.getChannelsShareKey
+  - wx.getChannelsLiveNoticeInfo
+  - wx.getChannelsLiveInfo
+- 音视频通话
+  - wx.requestDeviceVoIP
+  - wx.getDeviceVoIPList
+- 微信群
+  - wx.getGroupEnterInfo
+- 隐私信息授权
+  - wx.requirePrivacyAuthorize
+  - wx.openPrivacyContract
+  - wx.onNeedPrivacyAuthorization
+  - wx.getPrivacySetting
+- 微信客服
+  - wx.openCustomerServiceChat
+- 微信表情
+  - wx.openStickerSetView
+  - wx.openStickerIPView
+  - wx.openSingleStickerView
+
+## 设备
+
+- 蓝牙-通用
+  - wx.stopBluetoothDevicesDiscovery
+  - wx.startBluetoothDevicesDiscovery
+  - wx.openBluetoothAdapter
+  - wx.onBluetoothDeviceFound
+  - wx.onBluetoothAdapterStateChange
+  - wx.offBluetoothDeviceFound
+  - wx.offBluetoothAdapterStateChange
+  - wx.makeBluetoothPair
+  - wx.isBluetoothDevicePaired
+  - wx.getConnectedBluetoothDevices
+  - wx.getBluetoothDevices
+  - wx.getBluetoothAdapterState
+  - wx.closeBluetoothAdapter
+- 蓝牙-低功耗中心设备
+  - wx.writeBLECharacteristicValue
+  - wx.setBLEMTU
+  - wx.readBLECharacteristicValue
+  - wx.onBLEMTUChange
+  - wx.onBLEConnectionStateChange
+  - wx.onBLECharacteristicValueChange
+  - wx.offBLEMTUChange
+  - wx.offBLEConnectionStateChange
+  - wx.offBLECharacteristicValueChange
+  - wx.notifyBLECharacteristicValueChange
+  - wx.getBLEMTU
+  - wx.getBLEDeviceServices
+  - wx.getBLEDeviceRSSI
+  - wx.getBLEDeviceCharacteristics
+  - wx.createBLEConnection
+  - wx.closeBLEConnection
+- 蓝牙-低功耗外围设备
+  - wx.onBLEPeripheralConnectionStateChanged
+  - wx.offBLEPeripheralConnectionStateChanged
+  - wx.createBLEPeripheralServer
+  - BLEPeripheralServer
+    - BLEPeripheralServer.addService
+    - BLEPeripheralServer.close
+    - BLEPeripheralServer.offCharacteristicReadRequest
+    - BLEPeripheralServer.offCharacteristicSubscribed
+    - BLEPeripheralServer.offCharacteristicUnsubscribed
+    - BLEPeripheralServer.offCharacteristicWriteRequest
+    - BLEPeripheralServer.onCharacteristicReadRequest
+    - BLEPeripheralServer.onCharacteristicSubscribed
+    - BLEPeripheralServer.onCharacteristicUnsubscribed
+    - BLEPeripheralServer.onCharacteristicWriteRequest
+    - BLEPeripheralServer.removeService
+    - BLEPeripheralServer.startAdvertising
+    - BLEPeripheralServer.stopAdvertising
+    - BLEPeripheralServer.writeCharacteristicValue
+- 蓝牙-信标(Beacon)
+  - wx.stopBeaconDiscovery
+  - wx.startBeaconDiscovery
+  - wx.onBeaconUpdate
+  - wx.onBeaconServiceChange
+  - wx.offBeaconUpdate
+  - wx.offBeaconServiceChange
+  - wx.getBeacons
+  - BeaconInfo
+- NFC 读写
+  - wx.removeSecureElementPass
+  - wx.rechargeTransitCard
+  - wx.issueTransitCard
+  - wx.getTransitCardList
+  - wx.getTransitCardInfo
+  - wx.getTransitCardCPLC
+  - wx.getSecureElementPasses
+  - wx.getNFCAdapter
+  - wx.deleteTransitCard
+  - wx.checkTransitCardSupport
+  - wx.canAddSecureElementPass
+  - wx.addPaymentPassGetCertificateData
+  - wx.addPaymentPassFinish
+  - IsoDep
+    - IsoDep.close
+    - IsoDep.connect
+    - IsoDep.getHistoricalBytes
+    - IsoDep.getMaxTransceiveLength
+    - IsoDep.isConnected
+    - IsoDep.setTimeout
+    - IsoDep.transceive
+  - MifareClassic
+    - MifareClassic.close
+    - MifareClassic.connect
+    - MifareClassic.getMaxTransceiveLength
+    - MifareClassic.isConnected
+    - MifareClassic.setTimeout
+    - MifareClassic.transceive
+  - MifareUltralight
+    - MifareUltralight.close
+    - MifareUltralight.connect
+    - MifareUltralight.getMaxTransceiveLength
+    - MifareUltralight.isConnected
+    - MifareUltralight.setTimeout
+    - MifareUltralight.transceive
+  - Ndef
+    - Ndef.close
+    - Ndef.connect
+    - Ndef.isConnected
+    - Ndef.offNdefMessage
+    - Ndef.onNdefMessage
+    - Ndef.setTimeout
+    - Ndef.writeNdefMessage
+  - NfcA
+    - NfcA.close
+    - NfcA.connect
+    - NfcA.getAtqa
+    - NfcA.getMaxTransceiveLength
+    - NfcA.getSak
+    - NfcA.isConnected
+    - NfcA.setTimeout
+    - NfcA.transceive
+  - NFCAdapter
+    - NFCAdapter.getIsoDep
+    - NFCAdapter.getMifareClassic
+    - NFCAdapter.getMifareUltralight
+    - NFCAdapter.getNdef
+    - NFCAdapter.getNfcA
+    - NFCAdapter.getNfcB
+    - NFCAdapter.getNfcF
+    - NFCAdapter.getNfcV
+    - NFCAdapter.offDiscovered
+    - NFCAdapter.onDiscovered
+    - NFCAdapter.startDiscovery
+    - NFCAdapter.stopDiscovery
+  - NfcB
+    - NfcB.close
+    - NfcB.connect
+    - NfcB.getMaxTransceiveLength
+    - NfcB.isConnected
+    - NfcB.setTimeout
+    - NfcB.transceive
+  - NfcF
+    - NfcF.close
+    - NfcF.connect
+    - NfcF.getMaxTransceiveLength
+    - NfcF.isConnected
+    - NfcF.setTimeout
+    - NfcF.transceive
+  - NfcV
+    - NfcV.close
+    - NfcV.connect
+    - NfcV.getMaxTransceiveLength
+    - NfcV.isConnected
+    - NfcV.setTimeout
+    - NfcV.transceive
+- Wi-Fi
+  - wx.stopWifi
+  - wx.startWifi
+  - wx.setWifiList
+  - wx.onWifiConnectedWithPartialInfo
+  - wx.onWifiConnected
+  - wx.onGetWifiList
+  - wx.offWifiConnectedWithPartialInfo
+  - wx.offWifiConnected
+  - wx.offGetWifiList
+  - wx.getWifiList
+  - wx.getConnectedWifi
+  - wx.connectWifi
+  - WifiInfo
+- 日历
+  - wx.addPhoneRepeatCalendar
+  - wx.addPhoneCalendar
+- 联系人
+  - wx.chooseContact
+  - wx.addPhoneContact
+- 无障碍
+  - wx.checkIsOpenAccessibility
+- 电量
+  - wx.onBatteryInfoChange
+  - wx.offBatteryInfoChange
+  - wx.getBatteryInfoSync
+  - wx.getBatteryInfo
+- 剪贴板
+  - wx.setClipboardData
+  - wx.getClipboardData
+- NFC 主机卡模拟
+  - wx.stopHCE
+  - wx.startHCE
+  - wx.sendHCEMessage
+  - wx.onHCEMessage
+  - wx.offHCEMessage
+  - wx.getHCEState
+- 网络
+  - wx.onNetworkWeakChange
+  - wx.onNetworkStatusChange
+  - wx.offNetworkWeakChange
+  - wx.offNetworkStatusChange
+  - wx.getNetworkType
+  - wx.getLocalIPAddress
+- 加密
+  - wx.getRandomValues
+- 屏幕
+  - wx.setVisualEffectOnCapture
+  - wx.setScreenBrightness
+  - wx.setKeepScreenOn
+  - wx.onUserCaptureScreen
+  - wx.onScreenRecordingStateChanged
+  - wx.onGeneratePoster
+  - wx.offUserCaptureScreen
+  - wx.offScreenRecordingStateChanged
+  - wx.offGeneratePoster
+  - wx.getScreenRecordingState
+  - wx.getScreenBrightness
+- 键盘
+  - wx.onKeyUp
+  - wx.onKeyDown
+  - wx.onKeyboardHeightChange
+  - wx.offKeyUp
+  - wx.offKeyDown
+  - wx.offKeyboardHeightChange
+  - wx.hideKeyboard
+  - wx.getSelectedTextRange
+- 电话
+  - wx.makePhoneCall
+- 加速计
+  - wx.stopAccelerometer
+  - wx.startAccelerometer
+  - wx.onAccelerometerChange
+  - wx.offAccelerometerChange
+- 罗盘
+  - wx.stopCompass
+  - wx.startCompass
+  - wx.onCompassChange
+  - wx.offCompassChange
+- 设备方向
+  - wx.stopDeviceMotionListening
+  - wx.startDeviceMotionListening
+  - wx.onDeviceMotionChange
+  - wx.offDeviceMotionChange
+- 陀螺仪
+  - wx.stopGyroscope
+  - wx.startGyroscope
+  - wx.onGyroscopeChange
+  - wx.offGyroscopeChange
+- 内存
+  - wx.onMemoryWarning
+  - wx.offMemoryWarning
+- 扫码
+  - wx.scanCode
+- 短信
+  - wx.sendSms
+- 振动
+  - wx.vibrateShort
+  - wx.vibrateLong
+
+## AI
+
+- AI 推理
+  - wx.getInferenceEnvInfo
+  - wx.createInferenceSession
+  - InferenceSession
+    - InferenceSession.destroy
+    - InferenceSession.offError
+    - InferenceSession.offLoad
+    - InferenceSession.onError
+    - InferenceSession.onLoad
+    - InferenceSession.run
+  - Tensor
+  - Tensors
+- 视觉算法
+  - wx.isVKSupport
+  - wx.createVKSession
+  - VKBodyAnchor
+  - VKCamera
+    - VKCamera.getProjectionMatrix
+  - VKDepthAnchor
+  - VKFaceAnchor
+  - VKFrame
+    - VKFrame.getCameraBuffer
+    - VKFrame.getCameraJpgBuffer
+    - VKFrame.getCameraTexture
+    - VKFrame.getDepthBuffer
+    - VKFrame.getDisplayTransform
+    - VKFrame.getLegSegmentBuffer
+  - VKHandAnchor
+  - VKMarkerAnchor
+  - VKOCRAnchor
+  - VKOSDAnchor
+  - VKPlaneAnchor
+  - VKSession
+    - VKSession.addMarker
+    - VKSession.addOSDMarker
+    - VKSession.cancelAnimationFrame
+    - VKSession.destroy
+    - VKSession.detectBody
+    - VKSession.detectDepth
+    - VKSession.detectFace
+    - VKSession.detectHand
+    - VKSession.getAllMarker
+    - VKSession.getAllOSDMarker
+    - VKSession.getVKFrame
+    - VKSession.hitTest
+    - VKSession.off
+    - VKSession.on
+    - VKSession.removeMarker
+    - VKSession.removeOSDMarker
+    - VKSession.requestAnimationFrame
+    - VKSession.runOCR
+    - VKSession.setDepthOccRange
+    - VKSession.start
+    - VKSession.stop
+    - VKSession.update3DMode
+    - VKSession.updateMaskMode
+    - VKSession.updateOSDThreshold
+- 人脸检测
+  - wx.stopFaceDetect
+  - wx.initFaceDetect
+  - wx.faceDetect
+
+## Worker
+
+- wx.createWorker
+- Worker
+  - Worker.getCameraFrameData
+  - Worker.onError
+  - Worker.onMessage
+  - Worker.onProcessKilled
+  - Worker.postMessage
+  - Worker.terminate
+  - Worker.testOnProcessKilled
+
+## WXML
+
+- wx.createSelectorQuery
+- wx.createIntersectionObserver
+- IntersectionObserver
+  - IntersectionObserver.disconnect
+  - IntersectionObserver.observe
+  - IntersectionObserver.relativeTo
+  - IntersectionObserver.relativeToViewport
+- MediaQueryObserver
+  - MediaQueryObserver.disconnect
+  - MediaQueryObserver.observe
+- NodesRef
+  - NodesRef.boundingClientRect
+  - NodesRef.context
+  - NodesRef.fields
+  - NodesRef.node
+  - NodesRef.ref
+  - NodesRef.scrollOffset
+- SelectorQuery
+  - SelectorQuery.exec
+  - SelectorQuery.in
+  - SelectorQuery.select
+  - SelectorQuery.selectAll
+  - SelectorQuery.selectViewport
+
+## 第三方平台
+
+- wx.getExtConfigSync
+- wx.getExtConfig
+
+## 广告
+
+- wx.getShowSplashAdStatus
+- wx.createRewardedVideoAd
+- wx.createInterstitialAd
+- InterstitialAd
+  - InterstitialAd.destroy
+  - InterstitialAd.load
+  - InterstitialAd.offClose
+  - InterstitialAd.offError
+  - InterstitialAd.offLoad
+  - InterstitialAd.onClose
+  - InterstitialAd.onError
+  - InterstitialAd.onLoad
+  - InterstitialAd.show
+- RewardedVideoAd
+  - RewardedVideoAd.destroy
+  - RewardedVideoAd.load
+  - RewardedVideoAd.offClose
+  - RewardedVideoAd.offError
+  - RewardedVideoAd.offLoad
+  - RewardedVideoAd.onClose
+  - RewardedVideoAd.onError
+  - RewardedVideoAd.onLoad
+  - RewardedVideoAd.show
+
+## Skyline
+
+- DraggableSheetContext
+  - DraggableSheetContext.scrollTo
+- OpenContainer
+- Snapshot
+  - Snapshot.takeSnapshot
+
+## XR-FRAME
+
+- 导览注意
+- Enumerations
+  - EARTrackerState
+  - EAnimationBlendType
+  - EBlendEquation
+  - EBlendFactor
+  - EColorMask
+  - ECompareFunc
+  - ECullMode
+  - EDataModelType
+  - EEventType
+  - EFaceWinding
+  - EFilterMode
+  - EIndexType
+  - ELoadAction
+  - EMeshRenderType
+  - EPixelType
+  - EPrimitiveType
+  - EShareRecordState
+  - EShadowFitMode
+  - EShadowMode
+  - EShapeType
+  - EStencilOp
+  - ETextureFormat
+  - ETextureType
+  - EUniformType
+  - EUseDefaultAddedAction
+  - EUseDefaultRemovedAction
+  - EUseDefaultRetainedAction
+  - EVertexBatchOperator
+  - EVertexFormat
+  - EVertexLayoutUsage
+  - EVertexStep
+  - EVideoState
+  - EWrapMode
+  - ECapsuleShapeDirection
+- Classes
+  - ARSystem
+  - ARTracker
+  - Animation
+  - AnimationSystem
+  - Animator
+  - AssetLoad
+  - AssetLoader
+  - AssetMaterial
+  - AssetPostProcess
+  - AssetRenderTexture
+  - Assets
+  - AssetsSystem
+  - Atlas
+  - AtlasLoader
+  - BoundBall
+  - BoundBox
+  - Camera
+  - CameraOrbitControl
+  - CapsuleShape
+  - Color
+  - Component
+  - CubeShape
+  - CubeTextureLoader
+  - Effect
+  - Element
+  - Env
+  - EnvData
+  - EnvDataLoader
+  - EventManager
+  - GLTF
+  - GLTFLoader
+  - GLTFModel
+  - Geometry
+  - GizmoSystem
+  - ImageLoader
+  - KeyframeAnimation
+  - KeyframeLoader
+  - Light
+  - Material
+  - Matrix3
+  - Matrix4
+  - Mesh
+  - MeshShape
+  - NodeSystem
+  - OBB
+  - Particle
+  - PhysicsSystem
+  - PostProcess
+  - Quaternion
+  - RawLoader
+  - RaycastHit
+  - RenderSystem
+  - RenderTexture
+  - Scene
+  - Shape
+  - ShapeGizmos
+  - ShapeInteract
+  - ShareSystem
+  - SphereShape
+  - Spherical
+  - Text
+  - TextureLoader
+  - TickSystem
+  - Transform
+  - Vector2
+  - Vector3
+  - Vector4
+  - VideoSystem
+  - VideoTexture
+  - VideoTextureLoader
+  - XRARTracker
+  - XRAssetLoad
+  - XRAssetPostProcess
+  - XRAssetRenderTexture
+  - XRAssets
+  - XRCamera
+  - XREnv
+  - XRGLTF
+  - XRLight
+  - XRMaterial
+  - XRMesh
+  - XRNode
+  - XRParticle
+  - XRShadow
+  - XRText
+  - Rigidbody
+- Interfaces
+  - IARRawData
+  - IARSystemData
+  - IARTrackerData
+  - IARTrackerRawData
+  - IAnimationPlayOptions
+  - IAnimationSystemData
+  - IAnimatorAutoPlay
+  - IAnimatorData
+  - IAssetMaterialData
+  - IAssetPostProcessData
+  - IAssetRenderTextureData
+  - IAssetsData
+  - IAssetsSystemData
+  - IAtlasCreationOptions
+  - IAtlasLoaderOptions
+  - IAtlasOptions
+  - IAttachment
+  - ICameraData
+  - ICameraOrbitControlData
+  - ICapsuleShapeData
+  - IComponentSchema
+  - ICubeShapeData
+  - ICubeTextureLoaderOptions
+  - IDataValueHandler
+  - IDownloader
+  - IEffectAsset
+  - IEngineSettings
+  - IEntityComponents
+  - IEnvData
+  - IEnvDataLoaderOptions
+  - IEnvDataOptions
+  - IEventBridge
+  - IFeatures
+  - IFontSetting
+  - IGLTFData
+  - IGLTFLoaderOptions
+  - IGLTFModelOptions
+  - IGizmoSystemData
+  - IGlyphInfo
+  - IHandle
+  - IImage
+  - IImageLoaderOptions
+  - IKeyframeAnimationData
+  - IKeyframeAnimationInfo
+  - IKeyframeAnimationOptions
+  - IKeyframeLoaderOptions
+  - ILightData
+  - ILoaderOptionsSchema
+  - ILongIntNativeMap
+  - IMeshData
+  - IMeshShapeData
+  - INativeMap
+  - INodeSystemData
+  - IParticleData
+  - IPhysicsSystemData
+  - IPostProcessOptions
+  - IRawLoaderOptions
+  - IRealDownloader
+  - IRect
+  - IRenderPassDescriptor
+  - IRenderStates
+  - IRenderSystemData
+  - IRenderTarget
+  - IRenderTextureOptions
+  - IRigidbodyData
+  - IShapeData
+  - IShapeDragEvent
+  - IShapeGizmosData
+  - IShapeInteractData
+  - IShapeTouchEvent
+  - IShareCaptureOptions
+  - IShareSystemData
+  - ISphereShapeData
+  - ISubMesh
+  - ITextData
+  - ITextureLoaderOptions
+  - ITextureOptions
+  - ITextureWrapper
+  - ITickSystemData
+  - ITransformData
+  - IUniformDescriptorOptions
+  - IVertexDataDescriptorOptions
+  - IVertexLayoutOptions
+  - IVideoSystemData
+  - IVideoTextureLoaderOptions
+  - IVideoTextureOptions
+  - IView
+  - IViewAction
+  - ICollideEvent
+  - IContactPoint
+  - IOverlapEvent
+- Type
+  - RaycastDesc
+  - TCameraBackground
+  - TDirection
+  - TEventCallback
+  - TTrackMode
+  - Texture
+  - UniformBlock
+  - UniformDescriptor
+  - VertexLayout
+- Variables
+  - ARSystemSchema
+  - ARTrackSchema
+  - ARTrackerDataMapping
+  - ARTrackerDefaultComponents
+  - AnimatorSchema
+  - AssetLoadDataMapping
+  - AssetLoadSchema
+  - AssetMaterialDataMapping
+  - AssetMaterialDefaultComponents
+  - AssetMaterialSchema
+  - AssetPostProcessDataMapping
+  - AssetPostProcessDefaultComponents
+  - AssetRenderTextureDataMapping
+  - AssetRenderTextureDefaultComponents
+  - AssetRenderTextureSchema
+  - AssetsDefaultComponents
+  - AssetsSchema
+  - BasicDataMapping
+  - BasicDefaultComponents
+  - CameraDataMapping
+  - CameraDefaultComponents
+  - CameraOrbitControlSchema
+  - CameraSchema
+  - CapsuleShapeSchema
+  - CubeShapeSchema
+  - EnvDataMapping
+  - EnvDefaultComponents
+  - EnvSchema
+  - GLTFDataMapping
+  - GLTFDefaultComponents
+  - GLTFSchema
+  - LightDataMapping
+  - LightDefaultComponents
+  - LightSchema
+  - MeshDataMapping
+  - MeshDefaultComponents
+  - MeshSchema
+  - MeshShapeSchema
+  - NodeDataMapping
+  - NodeDefaultComponents
+  - ParticleDataMapping
+  - ParticleDefaultComponents
+  - ParticleSchema
+  - RenderSystemSchema
+  - RigidbodySchema
+  - SceneDataMapping
+  - SceneDefaultComponents
+  - ShadowDataMapping
+  - ShadowDefaultComponents
+  - ShapeInteractSchema
+  - SphereShapeSchema
+  - TextDataMapping
+  - TextDefaultComponents
+  - TextSchema
+  - TransformSchema
+  - noneParamsEaseFuncs
+  - useParamsEaseFuncs
+- Functions
+  - isTextureWrapper
+  - registerAssetLoader
+  - registerComponent
+  - registerDataValue
+  - registerEffect
+  - registerElement
+  - registerGeometry
+  - registerMaterial
+  - registerTexture
+  - registerUniformDesc
+  - registerVertexDataDesc
+  - registerVertexLayout

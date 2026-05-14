@@ -1,0 +1,93 @@
+<view class="finance-window">
+  <!-- Time range filter -->
+  <view class="filter-bar">
+    <view class="filter-option {{currentFilter === 'today' ? 'active' : ''}}" bindtap="setFilter" data-filter="today">本日</view>
+    <view class="filter-option {{currentFilter === 'week' ? 'active' : ''}}" bindtap="setFilter" data-filter="week">本周</view>
+    <view class="filter-option {{currentFilter === 'month' ? 'active' : ''}}" bindtap="setFilter" data-filter="month">本月</view>
+    <view class="filter-option {{currentFilter === 'year' ? 'active' : ''}}" bindtap="setFilter" data-filter="year">本年</view>
+  </view>
+
+  <scroll-view class="finance-content" scroll-y>
+    <!-- Team Summary Card -->
+    <view class="summary-card" wx:if="{{teamSummary}}">
+      <view class="card-header">
+        <text class="card-title">团队财务概览</text>
+      </view>
+      <view class="summary-grid">
+        <view class="summary-item income">
+          <text class="summary-label">收入</text>
+          <text class="summary-amount">¥{{teamSummary.income_total}}</text>
+        </view>
+        <view class="summary-item expense">
+          <text class="summary-label">支出</text>
+          <text class="summary-amount">¥{{teamSummary.expense_total}}</text>
+        </view>
+        <view class="summary-item {{teamSummary.balance >= 0 ? 'income' : 'expense'}}">
+          <text class="summary-label">{{teamSummary.balance >= 0 ? '结余' : '亏损'}}</text>
+          <text class="summary-amount">¥{{teamSummary.balance}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Personal Summary Card -->
+    <view class="summary-card" wx:if="{{personalSummary}}">
+      <view class="card-header">
+        <text class="card-title">个人财务概览</text>
+      </view>
+      <view class="summary-grid">
+        <view class="summary-item income">
+          <text class="summary-label">收入</text>
+          <text class="summary-amount">¥{{personalSummary.income_total}}</text>
+        </view>
+        <view class="summary-item expense">
+          <text class="summary-label">支出</text>
+          <text class="summary-amount">¥{{personalSummary.expense_total}}</text>
+        </view>
+        <view class="summary-item {{personalSummary.balance >= 0 ? 'income' : 'expense'}}">
+          <text class="summary-label">{{personalSummary.balance >= 0 ? '结余' : '亏损'}}</text>
+          <text class="summary-amount">¥{{personalSummary.balance}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Category breakdown -->
+    <view class="summary-card" wx:if="{{teamSummary && teamSummary.by_category.length > 0}}">
+      <view class="card-header">
+        <text class="card-title">分类统计</text>
+      </view>
+      <view class="category-list">
+        <view class="category-item" wx:for="{{teamSummary.by_category}}" wx:key="category">
+          <text class="category-name">{{item.category}}</text>
+          <text class="category-amount">¥{{item.amount}} ({{item.count}}笔)</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Transaction list -->
+    <view class="summary-card" wx:if="{{transactions.length > 0}}">
+      <view class="card-header">
+        <text class="card-title">交易记录</text>
+      </view>
+      <view class="transaction-list">
+        <view class="transaction-item" wx:for="{{transactions}}" wx:key="id">
+          <view class="tx-left">
+            <text class="tx-category">{{item.category}}</text>
+            <text class="tx-desc">{{item.description || ''}}</text>
+            <text class="tx-date">{{item.transaction_date}}</text>
+          </view>
+          <view class="tx-right">
+            <text class="tx-amount {{item.type === 'income' ? 'income' : 'expense'}}">
+              {{item.type === 'income' ? '+' : '-'}}¥{{item.amount}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Empty state -->
+    <view class="empty-state" wx:if="{{!teamSummary && !personalSummary}}">
+      <text class="empty-text">暂无财务数据</text>
+      <text class="empty-hint">去AI对话页面记录你的第一笔账吧</text>
+    </view>
+  </scroll-view>
+</view>

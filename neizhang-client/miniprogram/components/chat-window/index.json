@@ -1,0 +1,9 @@
+{
+  "component": true,
+  "usingComponents": {
+    "wd-markdown": "/components/agent-ui/wd-markdown/index",
+    "collapse-card": "/components/agent-ui/collapse/index",
+    "tool-display": "/components/agent-ui/tool/index",
+    "chat-file": "/components/agent-ui/chatFile/index"
+  }
+}

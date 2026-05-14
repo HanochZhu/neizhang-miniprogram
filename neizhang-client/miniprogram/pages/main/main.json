@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "内账",
+  "usingComponents": {
+    "chat-window": "/components/chat-window/index",
+    "financial-window": "/components/financial-window/index"
+  }
+}

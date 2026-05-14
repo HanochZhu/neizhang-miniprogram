@@ -1,0 +1,84 @@
+<view class="chat-window">
+  <!-- Messages list -->
+  <scroll-view class="message-list" scroll-y scroll-into-view="{{scrollToView}}" scroll-with-animation>
+    <view class="messages">
+      <block wx:for="{{messages}}" wx:key="id">
+        <!-- User message -->
+        <view class="message user-message" wx:if="{{item.role === 'user'}}">
+          <view class="bubble user-bubble">
+            <text>{{item.content}}</text>
+          </view>
+        </view>
+
+        <!-- Assistant message -->
+        <view class="message assistant-message" wx:elif="{{item.role === 'assistant'}}">
+          <view class="bubble assistant-bubble">
+            <wd-markdown content="{{item.content}}" wx:if="{{item.content}}"/>
+            <!-- Tool calls shown as collapsible cards -->
+            <view wx:if="{{item.toolCalls && item.toolCalls.length > 0}}" class="tool-calls">
+              <view wx:for="{{item.toolCalls}}" wx:key="name" wx:for-item="tool">
+                <collapse-card title="工具调用: {{tool.name}}" default-open="{{false}}">
+                  <view class="tool-detail">
+                    <view class="tool-section">
+                      <text class="tool-label">参数：</text>
+                      <text>{{tool.input}}</text>
+                    </view>
+                    <view class="tool-section" wx:if="{{tool.result}}">
+                      <text class="tool-label">结果：</text>
+                      <text>{{tool.result}}</text>
+                    </view>
+                  </view>
+                </collapse-card>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- System/tool message -->
+        <view class="message system-message" wx:elif="{{item.role === 'tool'}}">
+          <view class="bubble system-bubble">
+            <text>{{item.content}}</text>
+          </view>
+        </view>
+
+        <!-- File message -->
+        <view class="message user-message" wx:if="{{item.file}}">
+          <view class="bubble user-bubble">
+            <chat-file file="{{item.file}}" />
+          </view>
+        </view>
+      </block>
+
+      <!-- Typing indicator -->
+      <view class="message assistant-message" wx:if="{{streaming}}">
+        <view class="bubble assistant-bubble streaming-cursor">
+          <text>{{streamText || '思考中...'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view id="msg-bottom" style="height: 20rpx;"></view>
+  </scroll-view>
+
+  <!-- Input area -->
+  <view class="input-area">
+    <view class="input-row">
+      <view class="attach-btn" bindtap="chooseFile">
+        <image class="attach-icon" src="/components/agent-ui/imgs/uploadImg.svg" mode="aspectFit" />
+      </view>
+      <textarea
+        class="text-input"
+        value="{{inputText}}"
+        bindinput="onInput"
+        placeholder="输入记账信息..."
+        auto-height
+        maxlength="500"
+        adjust-position="{{true}}"
+        show-confirm-bar="{{false}}"
+      />
+      <view class="send-btn {{inputText ? 'active' : ''}}" bindtap="sendMessage">
+        <image class="send-icon" src="/components/agent-ui/imgs/send.svg" mode="aspectFit" />
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,22 @@
+<view class="main-page">
+  <!-- Content area - switch between views -->
+  <view class="content" hidden="{{currentTab !== 0}}">
+    <chat-window />
+  </view>
+
+  <view class="content" hidden="{{currentTab !== 1}}">
+    <financial-window />
+  </view>
+
+  <!-- Custom tab bar -->
+  <view class="tab-bar">
+    <view class="tab-item {{currentTab === 0 ? 'active' : ''}}" bindtap="switchTab" data-index="0">
+      <image class="tab-icon" src="/imgs/chat{{currentTab === 0 ? '-active' : ''}}.svg" mode="aspectFit" />
+      <text class="tab-text">AI对话</text>
+    </view>
+    <view class="tab-item {{currentTab === 1 ? 'active' : ''}}" bindtap="switchTab" data-index="1">
+      <image class="tab-icon" src="/imgs/finance{{currentTab === 1 ? '-active' : ''}}.svg" mode="aspectFit" />
+      <text class="tab-text">财务数据</text>
+    </view>
+  </view>
+</view>

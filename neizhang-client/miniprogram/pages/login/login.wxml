@@ -1,0 +1,32 @@
+<view class="login-page">
+  <view class="login-header">
+    <view class="login-title">内账</view>
+    <view class="login-subtitle">AI驱动的团队记账助手</view>
+  </view>
+
+  <view class="login-body">
+    <!-- WeChat Login Button (primary) -->
+    <button class="login-btn wechat-btn" bindtap="wechatLogin" loading="{{loading}}" disabled="{{loading}}">
+      微信一键登录
+    </button>
+
+    <view class="divider">
+      <view class="divider-line"></view>
+      <text class="divider-text">或</text>
+      <view class="divider-line"></view>
+    </view>
+
+    <!-- Phone Login Form (fallback) -->
+    <view class="phone-form">
+      <input class="input-field" placeholder="手机号" value="{{phone}}" bindinput="onPhoneInput" type="number" maxlength="11"/>
+      <input class="input-field" placeholder="姓名" value="{{name}}" bindinput="onNameInput"/>
+      <button class="login-btn phone-btn" bindtap="phoneLogin" loading="{{phoneLoading}}" disabled="{{phoneLoading}}">
+        手机号登录
+      </button>
+    </view>
+  </view>
+
+  <view class="login-footer">
+    <text class="footer-text">登录即表示同意服务条款</text>
+  </view>
+</view>
