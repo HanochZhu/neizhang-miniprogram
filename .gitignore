@@ -2,3 +2,8 @@
 neizhang-server/.env
 neizhang-server/.venv/
 .claude/
+
+# SQLite：本地/运行时数据，启动时由 SQLAlchemy 建表自动生成，勿提交
+neizhang-server/neizhang.db*
+# 用户上传文件（默认 uploads/）
+neizhang-server/uploads/
