@@ -55,6 +55,18 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - 启动后会自动建库、建表，并在 **`http://127.0.0.1:8000`** 提供服务。
 - 健康检查：**`curl http://127.0.0.1:8000/health`**，返回 `{"status":"ok"}` 即正常。
 
+### 4. 自动化测试（pytest）
+
+在 **`neizhang-server`** 目录下安装开发依赖并运行用例（使用独立临时 SQLite 与测试用 JWT 密钥，不读写你本地的 `neizhang.db`）：
+
+```bash
+cd neizhang-server
+pip install -r requirements-dev.txt
+pytest
+```
+
+建议按 **TDD**：先为要改的行为在 `neizhang-server/tests/` 增加或调整用例，再实现功能，最后保持 `pytest` 全绿。
+
 ---
 
 ## 客户端（neizhang-client）
@@ -86,6 +98,12 @@ http://127.0.0.1:8000
 若未关闭校验，控制台会出现 `request 合法域名校验出错`、本地地址不在合法域名列表等提示，请求被拦后界面常表现为 **`Error: timeout`**，与手机号登录本身无关。
 
 **正式上线**：将 API 部署到 **HTTPS** 域名，在 [公众平台](https://mp.weixin.qq.com/) **开发管理 → 开发设置 → 服务器域名** 中把该域名加入 request 合法域名，并把小程序里的 `serverUrl` 改为该 HTTPS 地址。
+
+### 4. 后端管理界面
+
+```
+http://127.0.0.1:8000/admin
+```
 
 ---
 

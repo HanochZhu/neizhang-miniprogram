@@ -7,3 +7,19 @@ neizhang-server/.venv/
 neizhang-server/neizhang.db*
 # 用户上传文件（默认 uploads/）
 neizhang-server/uploads/
+neizhang-server/.pytest_cache/
+neizhang-server/tests/_uploads_tmp/
+neizhang-server/app/__pycache__/
+neizhang-server/app/models/__pycache__/
+neizhang-server/app/routers/__pycache__/
+neizhang-server/app/database/__pycache__/
+neizhang-server/app/config/__pycache__/
+neizhang-server/app/main/__pycache__/
+neizhang-server/app/models/__pycache__/
+neizhang-server/app/routers/__pycache__/
+neizhang-server/app/database/__pycache__/
+neizhang-server/app/config/__pycache__/
+neizhang-server/app/main/__pycache__/
+neizhang-server/app/services/__pycache__/
+neizhang-server/tests/__pycache__
+neizhang-server/app/tools/__pycache__

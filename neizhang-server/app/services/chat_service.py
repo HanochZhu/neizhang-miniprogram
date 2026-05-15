@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import AsyncGenerator, Optional
 
 from anthropic import AsyncAnthropic
@@ -8,6 +9,8 @@ from app.config import settings
 from app.models.chat_message import ChatMessage
 from app.services.context_service import get_recent_messages
 from app.tools.finance_tools import add_transaction, query_transactions, get_summary
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
     "你是内账助手，一个专注于财务记账和费用管理的AI助手。"
@@ -192,6 +195,15 @@ async def chat_stream(
       3. If the response contains tool_use blocks, execute them and loop back
       4. When a pure text response is returned, end the stream
     """
+    if not (settings.deepseek_api_key or "").strip():
+        yield _format_sse(
+            {
+                "type": "error",
+                "content": "服务端未配置 DEEPSEEK_API_KEY：请在 neizhang-server/.env 中设置后重启服务。",
+            }
+        )
+        return
+
     # Load recent history
     history = await get_recent_messages(team_id, db, limit=20)
     messages = list(history)
@@ -207,6 +219,13 @@ async def chat_stream(
 
     # ReAct loop (max 5 iterations to prevent infinite loops)
     for iteration in range(5):
+        if settings.chat_trace:
+            logger.info(
+                "chat iteration=%s messages_len=%s",
+                iteration,
+                len(messages),
+            )
+
         # Collect text deltas and tool usage from this iteration
         collected_text = ""
         collected_tool_uses = []
@@ -254,6 +273,18 @@ async def chat_stream(
             # Get the final message from the stream
             final_message = await stream.get_final_message()
             assistant_content_blocks = final_message.content
+            if settings.chat_trace:
+                stop_reason = getattr(final_message, "stop_reason", None)
+                block_types = [
+                    getattr(b, "type", type(b).__name__)
+                    for b in assistant_content_blocks
+                ]
+                logger.info(
+                    "chat iteration=%s stop_reason=%s block_types=%s",
+                    iteration,
+                    stop_reason,
+                    block_types,
+                )
 
         # Check for tool use in the response
         tool_use_blocks = [b for b in assistant_content_blocks if b.type == "tool_use"]
@@ -265,7 +296,20 @@ async def chat_stream(
         # If there are no tool uses, we're done
         if not tool_use_blocks:
             final_text_content = collected_text or (text_blocks[0].text if text_blocks else "")
+            if settings.chat_trace:
+                logger.info(
+                    "chat iteration=%s finished with text (len=%s)",
+                    iteration,
+                    len(final_text_content or ""),
+                )
             break
+
+        if settings.chat_trace:
+            logger.info(
+                "chat iteration=%s tool_round names=%s",
+                iteration,
+                [b.name for b in tool_use_blocks],
+            )
 
         # We have tool uses: add the assistant response to messages
         messages.append({"role": "assistant", "content": assistant_content_blocks})
@@ -281,6 +325,16 @@ async def chat_stream(
                 except json.JSONDecodeError:
                     tool_input = {}
 
+            if settings.chat_trace:
+                preview = json.dumps(tool_input, ensure_ascii=False)
+                if len(preview) > 800:
+                    preview = preview[:800] + "..."
+                logger.info(
+                    "chat executing tool name=%s input=%s",
+                    tool_use.name,
+                    preview,
+                )
+
             result = await _execute_tool(
                 tool_name=tool_use.name,
                 tool_input=tool_input,
@@ -288,6 +342,14 @@ async def chat_stream(
                 user_id=user_id,
                 db=db,
             )
+
+            if settings.chat_trace:
+                rpreview = result if len(result) <= 600 else result[:600] + "..."
+                logger.info(
+                    "chat tool done name=%s result_preview=%s",
+                    tool_use.name,
+                    rpreview,
+                )
 
             yield _format_sse(
                 {
