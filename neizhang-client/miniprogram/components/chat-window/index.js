@@ -196,6 +196,63 @@ Component({
       this._appendStreamText(displayText)
     },
 
+    _typeLabel(txType) {
+      return txType === 'income' ? '收入' : '支出'
+    },
+
+    _attachPendingConfirm(pendingConfirm) {
+      const msgs = [...this.data.messages]
+      const current = this.data.currentAssistantMsg
+      const streamText = (this.data.streamText || '').trim()
+
+      if (current) {
+        const idx = msgs.findIndex((m) => m.id === current.id)
+        if (idx >= 0) {
+          msgs[idx] = {
+            ...msgs[idx],
+            content: streamText || msgs[idx].content || pendingConfirm.message,
+            pendingConfirm
+          }
+          this.setData({
+            messages: msgs,
+            streamText: '',
+            currentAssistantMsg: msgs[idx],
+            streaming: false
+          })
+          return
+        }
+      }
+
+      msgs.push({
+        id: Date.now(),
+        role: 'assistant',
+        content: streamText || pendingConfirm.message,
+        pendingConfirm
+      })
+      this.setData({
+        messages: msgs,
+        streamText: '',
+        currentAssistantMsg: null,
+        streaming: false
+      })
+    },
+
+    _resolvePendingConfirm(proposalId, status, extraText) {
+      const msgs = [...this.data.messages]
+      const idx = msgs.findIndex(
+        (m) => m.pendingConfirm && m.pendingConfirm.proposalId === proposalId
+      )
+      if (idx < 0) return
+
+      const msg = { ...msgs[idx] }
+      msg.pendingConfirm = { ...msg.pendingConfirm, status }
+      if (extraText) {
+        msg.content = extraText
+      }
+      msgs[idx] = msg
+      this.setData({ messages: msgs, currentAssistantMsg: null })
+    },
+
     handleSSEEvent(event) {
       switch (event.type) {
         case 'text_delta':
@@ -204,6 +261,28 @@ Component({
 
         case 'record_success':
           this._appendStreamText(event.content || '')
+          break
+
+        case 'confirmation_required':
+          this._attachPendingConfirm({
+            proposalId: event.proposal_id,
+            message: event.message || '请确认是否保存该笔记录',
+            reason: event.reason || '',
+            transaction: event.transaction || {},
+            status: 'pending'
+          })
+          break
+
+        case 'proposal_confirmed':
+          this._resolvePendingConfirm(event.proposal_id, 'confirmed')
+          break
+
+        case 'proposal_cancelled':
+          this._resolvePendingConfirm(
+            event.proposal_id,
+            'cancelled',
+            event.content || '已取消，未保存该笔记录。'
+          )
           break
 
         case 'tool_start':
@@ -239,7 +318,67 @@ Component({
       }
     },
 
+    onConfirmProposal(e) {
+      const proposalId = e.currentTarget.dataset.proposalId
+      const confirmed = e.currentTarget.dataset.confirmed === 'true' || e.currentTarget.dataset.confirmed === true
+      if (!proposalId || this.data.streaming) return
+      this.streamConfirm(proposalId, confirmed)
+    },
+
+    streamConfirm(proposalId, confirmed) {
+      const token = app.globalData.token
+      const that = this
+      that._sseBuffer = ''
+      that._streamEnded = false
+      that.setData({ streaming: true, streamText: '' })
+
+      const finish = (err) => {
+        if (that._streamEnded) return
+        that._streamEnded = true
+        that._flushSSEBuffer()
+        that.setData({ streaming: false, streamText: '' })
+        if (err) wx.showToast({ title: err.message || '操作失败', icon: 'none' })
+      }
+
+      const task = wx.request({
+        url: app.globalData.serverUrl + '/api/v1/chat/confirm',
+        method: 'POST',
+        header: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        data: { proposal_id: proposalId, confirmed },
+        enableChunked: true,
+        responseType: 'text',
+        success: (res) => {
+          if (res.statusCode >= 400) {
+            finish(new Error(res.data?.detail || '请求失败'))
+            return
+          }
+          if (res.data) that._processSSEChunk(res.data)
+          finish()
+        },
+        fail: (err) => {
+          finish(new Error('请求失败: ' + err.errMsg))
+        }
+      })
+
+      task.onChunkReceived((res) => {
+        try {
+          that._processSSEChunk(res.data)
+        } catch (e) {
+          console.error('Confirm chunk error:', e)
+        }
+      })
+    },
+
     finalizeStream() {
+      const last = this.data.messages[this.data.messages.length - 1]
+      if (last && last.pendingConfirm && last.pendingConfirm.status === 'pending') {
+        this.setData({ streaming: false, streamText: '', currentAssistantMsg: null })
+        return
+      }
+
       if (!this.data.streaming && !this.data.streamText && !this.data.currentAssistantMsg) {
         return
       }

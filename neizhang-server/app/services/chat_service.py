@@ -8,7 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models.chat_message import ChatMessage
 from app.services.context_service import get_recent_messages
-from app.tools.finance_tools import add_transaction, query_transactions, get_summary
+from sqlalchemy import select
+
+from app.models.transaction_proposal import TransactionProposal
+from app.tools.finance_tools import (
+    add_transaction,
+    get_summary,
+    propose_transaction,
+    query_transactions,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,21 +25,61 @@ SYSTEM_PROMPT = (
     "你只能回答与财务、记账、费用管理相关的问题。"
     "如果用户询问与财务无关的问题，请礼貌地告知你只能帮助处理财务相关的事务，并引导用户回到记账话题。\n\n"
     "你可以使用以下工具来帮助用户管理财务：\n"
-    "- add_transaction: 添加一笔收支记录\n"
+    "- add_transaction: 在信息明确时直接添加一笔收支记录\n"
+    "- propose_transaction: 当你推测出记账内容但不确定是否应保存时，发起待确认提案（不会立即入账）\n"
     "- query_transactions: 查询收支记录\n"
     "- get_summary: 获取财务汇总\n\n"
     "请始终使用中文回复。\n\n"
     "重要规则：\n"
-    "1. 每次用户要求记一笔新的收支（即使品类、金额与之前相同），都必须调用 add_transaction 新增一条记录；"
-    "不要因对话历史中已有类似账目而跳过记账。\n"
-    "2. 调用 add_transaction 成功后，用一句话向用户确认已记账（包含金额与类别）。\n"
-    "3. 信息不明确时先简短追问，明确后立刻调用工具。"
+    "1. 用户表述清晰、金额/类别/收支类型均无歧义时，使用 add_transaction 直接记账；"
+    "每次用户要求记一笔新的收支（即使与历史类似）都必须新增一条记录。\n"
+    "2. 以下情况使用 propose_transaction 并请用户确认，不要直接 add_transaction："
+    "金额或类别需合理推测、日期不明确、可能与近期记录重复、用户语气犹豫或说「大概」「好像」等。\n"
+    "3. propose_transaction 的 reason 参数用一句话说明为何需要用户确认。\n"
+    "4. 关键信息缺失（如不知道金额或收入/支出）时先简短追问，不要猜测后提案。\n"
+    "5. add_transaction 成功后，用一句话向用户确认已记账（包含金额与类别）。"
 )
 
 TOOLS = [
     {
+        "name": "propose_transaction",
+        "description": "发起一笔待用户确认的收支提案（不立即保存）。当记账信息需推测或你不确定是否应入账时使用。",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["income", "expense"],
+                    "description": "类型：收入或支出",
+                },
+                "amount": {"type": "number", "description": "金额（元）"},
+                "category": {
+                    "type": "string",
+                    "description": "类别，如：餐饮、交通、工资、办公用品等",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "需要用户确认的原因（一句话）",
+                },
+                "description": {
+                    "type": "string",
+                    "description": "描述（可选）",
+                },
+                "product": {
+                    "type": "string",
+                    "description": "产品/项目名称（可选）",
+                },
+                "transaction_date": {
+                    "type": "string",
+                    "description": "交易日期，格式YYYY-MM-DD（可选，默认为今天）",
+                },
+            },
+            "required": ["type", "amount", "category", "reason"],
+        },
+    },
+    {
         "name": "add_transaction",
-        "description": "添加一笔收支记录",
+        "description": "在信息明确时直接添加一笔收支记录",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -124,9 +172,41 @@ def _format_sse(data: dict) -> str:
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _parse_tool_result(result: str) -> dict:
+    try:
+        return json.loads(result)
+    except json.JSONDecodeError:
+        return {}
+
+
+def _confirmation_sse_from_propose(result: str) -> Optional[dict]:
+    data = _parse_tool_result(result)
+    if not data.get("success") or not data.get("pending"):
+        return None
+    tx = data.get("transaction") or {}
+    return {
+        "type": "confirmation_required",
+        "proposal_id": data.get("proposal_id"),
+        "message": data.get("message", "请确认是否保存该笔记录"),
+        "reason": data.get("reason"),
+        "transaction": tx,
+    }
+
+
 def _extra_events_after_tool(tool_name: str, result: str) -> list[dict]:
     """SSE events to push after a tool finishes (e.g. confirm记账成功)."""
     events: list[dict] = []
+    if tool_name == "propose_transaction":
+        confirm_event = _confirmation_sse_from_propose(result)
+        if confirm_event:
+            events.append(confirm_event)
+            events.append(
+                {
+                    "type": "text_delta",
+                    "content": confirm_event.get("message", ""),
+                }
+            )
+        return events
     if tool_name != "add_transaction":
         return events
     try:
@@ -147,7 +227,20 @@ async def _execute_tool(
     db: AsyncSession,
 ) -> str:
     """Execute a finance tool and return the result string."""
-    if tool_name == "add_transaction":
+    if tool_name == "propose_transaction":
+        return await propose_transaction(
+            team_id=team_id,
+            user_id=user_id,
+            tx_type=tool_input.get("type", ""),
+            amount=tool_input.get("amount", 0),
+            category=tool_input.get("category", ""),
+            reason=tool_input.get("reason", "需要您确认是否保存"),
+            description=tool_input.get("description"),
+            product=tool_input.get("product"),
+            transaction_date=tool_input.get("transaction_date"),
+            db=db,
+        )
+    elif tool_name == "add_transaction":
         return await add_transaction(
             team_id=team_id,
             user_id=user_id,
@@ -237,8 +330,12 @@ async def chat_stream(
     last_tool_results: list = []
     final_text_content: Optional[str] = None
 
+    awaiting_user_confirmation = False
+
     # ReAct loop (max 5 iterations to prevent infinite loops)
     for iteration in range(5):
+        if awaiting_user_confirmation:
+            break
         if settings.chat_trace:
             logger.info(
                 "chat iteration=%s messages_len=%s",
@@ -382,6 +479,17 @@ async def chat_stream(
             for extra in _extra_events_after_tool(tool_use.name, result):
                 yield _format_sse(extra)
 
+            if tool_use.name == "propose_transaction":
+                parsed = _parse_tool_result(result)
+                if parsed.get("pending"):
+                    awaiting_user_confirmation = True
+                    if parsed.get("message"):
+                        final_text_content = parsed["message"]
+                    break
+
+            if awaiting_user_confirmation:
+                break
+
             # Add tool result as a user message content block
             messages.append(
                 {
@@ -395,6 +503,9 @@ async def chat_stream(
                     ],
                 }
             )
+
+        if awaiting_user_confirmation:
+            break
 
     # Build final text content if we exited the loop after tool iterations
     if final_text_content is None and all_assistant_content:
@@ -421,4 +532,77 @@ async def chat_stream(
         await _save_message(db, team_id, user_id, "assistant", f"[调用了工具: {tool_names}]")
 
     # Signal end of stream
+    yield _format_sse({"type": "message_stop"})
+
+
+async def confirm_proposal_stream(
+    proposal_id: str,
+    confirmed: bool,
+    team_id: int,
+    user_id: int,
+    db: AsyncSession,
+) -> AsyncGenerator[str, None]:
+    """用户确认或取消待记账提案后，执行保存或取消并流式返回结果。"""
+    result = await db.execute(
+        select(TransactionProposal).where(
+            TransactionProposal.id == proposal_id,
+            TransactionProposal.team_id == team_id,
+            TransactionProposal.user_id == user_id,
+        )
+    )
+    proposal = result.scalar_one_or_none()
+
+    if proposal is None:
+        yield _format_sse({"type": "error", "content": "未找到该待确认记录或无权操作"})
+        yield _format_sse({"type": "message_stop"})
+        return
+
+    if proposal.status != "pending":
+        yield _format_sse(
+            {
+                "type": "error",
+                "content": "该提案已处理，请勿重复操作",
+            }
+        )
+        yield _format_sse({"type": "message_stop"})
+        return
+
+    if confirmed:
+        tool_result = await add_transaction(
+            team_id=team_id,
+            user_id=user_id,
+            tx_type=proposal.type,
+            amount=proposal.amount,
+            category=proposal.category,
+            description=proposal.description,
+            product=proposal.product,
+            transaction_date=proposal.transaction_date,
+            db=db,
+        )
+        proposal.status = "confirmed"
+        data = _parse_tool_result(tool_result)
+        if data.get("success"):
+            message = data.get("message", "已保存")
+            yield _format_sse({"type": "proposal_confirmed", "proposal_id": proposal_id})
+            for extra in _extra_events_after_tool("add_transaction", tool_result):
+                yield _format_sse(extra)
+            await _save_message(db, team_id, user_id, "assistant", message)
+        else:
+            message = data.get("error", "保存失败")
+            proposal.status = "pending"
+            yield _format_sse({"type": "error", "content": message})
+    else:
+        proposal.status = "cancelled"
+        message = "已取消，未保存该笔记录。"
+        yield _format_sse(
+            {
+                "type": "proposal_cancelled",
+                "proposal_id": proposal_id,
+                "content": message,
+            }
+        )
+        yield _format_sse({"type": "text_delta", "content": message})
+        await _save_message(db, team_id, user_id, "assistant", message)
+
+    await db.flush()
     yield _format_sse({"type": "message_stop"})

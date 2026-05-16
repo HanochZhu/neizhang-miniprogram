@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import engine, Base
+import app.models  # noqa: F401 — register all ORM tables before create_all
 from app.routers import auth, chat, files, finance, admin
 
 

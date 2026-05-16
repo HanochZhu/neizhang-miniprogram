@@ -3,7 +3,11 @@
 import json
 import uuid
 
-from app.services.chat_service import _extra_events_after_tool
+from app.services.chat_service import (
+    _confirmation_sse_from_propose,
+    _extra_events_after_tool,
+)
+from app.tools.finance_tools import propose_transaction
 
 
 def _login(client):
@@ -51,6 +55,75 @@ def test_extra_events_after_add_transaction_success():
 def test_extra_events_after_add_transaction_error():
     result = json.dumps({"error": "金额必须大于0"}, ensure_ascii=False)
     assert _extra_events_after_tool("add_transaction", result) == []
+
+
+def test_extra_events_after_propose_transaction():
+    result = json.dumps(
+        {
+            "success": True,
+            "pending": True,
+            "proposal_id": "abc-123",
+            "message": "请确认是否保存：支出 ¥50.00，类别：餐饮",
+            "reason": "金额来自推测",
+            "transaction": {
+                "type": "expense",
+                "amount": 50,
+                "category": "餐饮",
+            },
+        },
+        ensure_ascii=False,
+    )
+    events = _extra_events_after_tool("propose_transaction", result)
+    types = [e["type"] for e in events]
+    assert "confirmation_required" in types
+    confirm = next(e for e in events if e["type"] == "confirmation_required")
+    assert confirm["proposal_id"] == "abc-123"
+    assert confirm["transaction"]["amount"] == 50
+
+
+def test_confirmation_sse_from_propose_invalid():
+    assert _confirmation_sse_from_propose('{"error":"x"}') is None
+
+
+def test_propose_transaction_rejects_invalid_amount():
+    import asyncio
+
+    async def _run():
+        return await propose_transaction(
+            team_id=1,
+            user_id=1,
+            tx_type="expense",
+            amount=0,
+            category="交通",
+            reason="测试",
+            db=None,
+        )
+
+    result = asyncio.run(_run())
+    data = json.loads(result)
+    assert "error" in data
+
+
+def test_chat_confirm_unknown_proposal_streams_error(client):
+    token = _login(client)
+    with client.stream(
+        "POST",
+        "/api/v1/chat/confirm",
+        json={"proposal_id": "non-existent-id", "confirmed": True},
+        headers={"Authorization": f"Bearer {token}"},
+    ) as r:
+        assert r.status_code == 200
+        body = "".join(chunk.decode("utf-8") for chunk in r.iter_bytes())
+    assert "error" in body
+    assert "message_stop" in body
+
+
+def test_chat_confirm_requires_auth(client):
+    r = client.post(
+        "/api/v1/chat/confirm",
+        json={"proposal_id": "x", "confirmed": True},
+    )
+    assert r.status_code == 401
 
 
 def test_chat_send_streams_when_mocked(client, monkeypatch):

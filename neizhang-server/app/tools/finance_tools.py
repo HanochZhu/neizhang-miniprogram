@@ -6,6 +6,81 @@ from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.transaction import Transaction
+from app.models.transaction_proposal import TransactionProposal
+
+
+async def propose_transaction(
+    team_id: int,
+    user_id: int,
+    tx_type: str,
+    amount: float,
+    category: str,
+    reason: str,
+    description: Optional[str] = None,
+    product: Optional[str] = None,
+    transaction_date: Optional[str] = None,
+    db: Optional[AsyncSession] = None,
+) -> str:
+    """创建待确认的记账提案，不直接写入账目表。"""
+    if db is None:
+        return json.dumps({"error": "数据库连接不可用"}, ensure_ascii=False)
+
+    if tx_type not in ("income", "expense"):
+        return json.dumps({"error": "类型必须是 income 或 expense"}, ensure_ascii=False)
+
+    if amount <= 0:
+        return json.dumps({"error": "金额必须大于0"}, ensure_ascii=False)
+
+    if transaction_date:
+        try:
+            datetime.strptime(transaction_date, "%Y-%m-%d")
+        except ValueError:
+            return json.dumps(
+                {"error": "日期格式错误，应为 YYYY-MM-DD"}, ensure_ascii=False
+            )
+
+    proposal = TransactionProposal(
+        team_id=team_id,
+        user_id=user_id,
+        type=tx_type,
+        amount=amount,
+        category=category,
+        description=description,
+        product=product,
+        transaction_date=transaction_date,
+        reason=reason,
+        status="pending",
+    )
+    db.add(proposal)
+    await db.flush()
+
+    type_label = "收入" if tx_type == "income" else "支出"
+    summary = f"{type_label} ¥{amount:.2f}，类别：{category}"
+    if product:
+        summary += f"，项目：{product}"
+    if description:
+        summary += f"，备注：{description}"
+    if transaction_date:
+        summary += f"，日期：{transaction_date}"
+
+    return json.dumps(
+        {
+            "success": True,
+            "pending": True,
+            "proposal_id": proposal.id,
+            "message": f"请确认是否保存：{summary}",
+            "reason": reason,
+            "transaction": {
+                "type": tx_type,
+                "amount": amount,
+                "category": category,
+                "description": description,
+                "product": product,
+                "transaction_date": transaction_date,
+            },
+        },
+        ensure_ascii=False,
+    )
 
 
 async def add_transaction(

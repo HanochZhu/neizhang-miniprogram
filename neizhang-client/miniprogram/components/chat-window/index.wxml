@@ -14,6 +14,45 @@
         <view class="message assistant-message" wx:elif="{{item.role === 'assistant'}}">
           <view class="bubble assistant-bubble">
             <wd-markdown content="{{item.content}}" wx:if="{{item.content}}"/>
+            <!-- 待确认记账 -->
+            <view
+              wx:if="{{item.pendingConfirm && item.pendingConfirm.status === 'pending'}}"
+              class="confirm-card"
+            >
+              <view class="confirm-title">请确认是否保存</view>
+              <view class="confirm-reason" wx:if="{{item.pendingConfirm.reason}}">
+                {{item.pendingConfirm.reason}}
+              </view>
+              <view class="confirm-detail">
+                <text>{{item.pendingConfirm.transaction.type === 'income' ? '收入' : '支出'}}</text>
+                <text> ¥{{item.pendingConfirm.transaction.amount}}</text>
+                <text> · {{item.pendingConfirm.transaction.category}}</text>
+                <text wx:if="{{item.pendingConfirm.transaction.product}}"> · {{item.pendingConfirm.transaction.product}}</text>
+                <text wx:if="{{item.pendingConfirm.transaction.transaction_date}}"> · {{item.pendingConfirm.transaction.transaction_date}}</text>
+              </view>
+              <view class="confirm-actions">
+                <view
+                  class="confirm-btn confirm-cancel"
+                  data-proposal-id="{{item.pendingConfirm.proposalId}}"
+                  data-confirmed="{{false}}"
+                  bindtap="onConfirmProposal"
+                >取消</view>
+                <view
+                  class="confirm-btn confirm-ok"
+                  data-proposal-id="{{item.pendingConfirm.proposalId}}"
+                  data-confirmed="{{true}}"
+                  bindtap="onConfirmProposal"
+                >确认保存</view>
+              </view>
+            </view>
+            <view
+              wx:elif="{{item.pendingConfirm && item.pendingConfirm.status === 'confirmed'}}"
+              class="confirm-status confirmed"
+            >已确认并保存</view>
+            <view
+              wx:elif="{{item.pendingConfirm && item.pendingConfirm.status === 'cancelled'}}"
+              class="confirm-status cancelled"
+            >已取消，未保存</view>
             <!-- Tool calls shown as collapsible cards -->
             <view wx:if="{{item.toolCalls && item.toolCalls.length > 0}}" class="tool-calls">
               <view wx:for="{{item.toolCalls}}" wx:key="name" wx:for-item="tool">
