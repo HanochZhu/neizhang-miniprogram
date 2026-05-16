@@ -21,5 +21,5 @@ neizhang-server/app/database/__pycache__/
 neizhang-server/app/config/__pycache__/
 neizhang-server/app/main/__pycache__/
 neizhang-server/app/services/__pycache__/
-neizhang-server/tests/__pycache__
-neizhang-server/app/tools/__pycache__
+neizhang-server/tests/__pycache__/
+neizhang-server/app/tools/__pycache__/

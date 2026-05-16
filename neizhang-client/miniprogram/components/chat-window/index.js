@@ -26,7 +26,6 @@ Component({
       const text = this.data.inputText.trim()
       if (!text || this.data.streaming) return
 
-      // Add user message
       const userMsg = { id: Date.now(), role: 'user', content: text }
       const messages = [...this.data.messages, userMsg]
 
@@ -35,6 +34,7 @@ Component({
         inputText: '',
         streaming: true,
         streamText: '',
+        currentAssistantMsg: null,
         scrollToView: 'msg-bottom'
       })
 
@@ -42,7 +42,50 @@ Component({
         await this.streamChat(text)
       } catch (err) {
         wx.showToast({ title: err.message || '发送失败', icon: 'none' })
-        this.setData({ streaming: false })
+        this.setData({ streaming: false, streamText: '', currentAssistantMsg: null })
+      }
+    },
+
+    _decodeChunk(data) {
+      if (data == null) return ''
+      if (typeof data === 'string') return data
+      if (data instanceof ArrayBuffer) {
+        return new TextDecoder('utf-8').decode(new Uint8Array(data))
+      }
+      return String(data)
+    },
+
+    _processSSEChunk(raw) {
+      if (!this._sseBuffer) this._sseBuffer = ''
+      this._sseBuffer += this._decodeChunk(raw)
+
+      const parts = this._sseBuffer.split('\n\n')
+      this._sseBuffer = parts.pop() || ''
+
+      for (const block of parts) {
+        const line = block.trim()
+        if (!line.startsWith('data: ')) continue
+        const jsonStr = line.slice(6)
+        try {
+          const event = JSON.parse(jsonStr)
+          this.handleSSEEvent(event)
+        } catch (e) {
+          console.warn('Failed to parse SSE:', jsonStr)
+        }
+      }
+    },
+
+    _flushSSEBuffer() {
+      const rest = (this._sseBuffer || '').trim()
+      this._sseBuffer = ''
+      if (!rest) return
+      if (rest.startsWith('data: ')) {
+        try {
+          const event = JSON.parse(rest.slice(6))
+          this.handleSSEEvent(event)
+        } catch (e) {
+          console.warn('Failed to parse trailing SSE:', rest)
+        }
       }
     },
 
@@ -50,6 +93,17 @@ Component({
       return new Promise((resolve, reject) => {
         const token = app.globalData.token
         const that = this
+        that._sseBuffer = ''
+        that._streamEnded = false
+
+        const finish = (err) => {
+          if (that._streamEnded) return
+          that._streamEnded = true
+          that._flushSSEBuffer()
+          that.finalizeStream()
+          if (err) reject(err)
+          else resolve()
+        }
 
         const task = wx.request({
           url: app.globalData.serverUrl + '/api/v1/chat/send',
@@ -61,96 +115,170 @@ Component({
           data: { message },
           enableChunked: true,
           responseType: 'text',
-          success: () => {},
+          success: (res) => {
+            if (res.statusCode >= 400) {
+              finish(new Error(res.data?.detail || '请求失败'))
+              return
+            }
+            if (res.data) that._processSSEChunk(res.data)
+            finish()
+          },
           fail: (err) => {
-            that.setData({ streaming: false })
-            reject(new Error('请求失败: ' + err.errMsg))
+            that.setData({ streaming: false, streamText: '', currentAssistantMsg: null })
+            finish(new Error('请求失败: ' + err.errMsg))
           }
         })
 
-        // Handle chunked response
-        let buffer = ''
         task.onChunkReceived((res) => {
           try {
-            buffer += res.data
-            // Process complete SSE events
-            const lines = buffer.split('\n\n')
-            buffer = lines.pop() || '' // Keep incomplete chunk
-
-            for (const line of lines) {
-              if (!line.trim() || !line.startsWith('data: ')) continue
-              const jsonStr = line.slice(6) // Remove 'data: ' prefix
-              try {
-                const event = JSON.parse(jsonStr)
-                that.handleSSEEvent(event)
-              } catch (e) {
-                console.warn('Failed to parse SSE:', jsonStr)
-              }
-            }
+            that._processSSEChunk(res.data)
           } catch (e) {
             console.error('Chunk processing error:', e)
           }
         })
-
-        // We need to poll for completion since wx.request doesn't have a promise-based chunked API
-        // Use a combination approach
-        task.onHeadersReceived(() => {
-          // Headers received, continue handling chunks
-        })
       })
+    },
+
+    _ensureAssistantToolMessage(toolName, toolInput) {
+      if (this.data.currentAssistantMsg) return
+
+      const assistantMsg = {
+        id: Date.now(),
+        role: 'assistant',
+        content: this.data.streamText || '',
+        toolCalls: [{
+          name: toolName,
+          input: typeof toolInput === 'string' ? toolInput : JSON.stringify(toolInput || {})
+        }]
+      }
+      const messages = [...this.data.messages, assistantMsg]
+      this.setData({
+        messages,
+        streamText: '',
+        currentAssistantMsg: assistantMsg
+      })
+    },
+
+    _appendStreamText(text) {
+      if (!text) return
+      this.setData({ streamText: this.data.streamText + text })
+    },
+
+    _applyToolResult(toolName, resultContent) {
+      let displayText = resultContent
+      try {
+        const parsed = JSON.parse(resultContent)
+        if (parsed.message) displayText = parsed.message
+        else if (parsed.error) displayText = parsed.error
+      } catch (e) {
+        // keep raw string
+      }
+
+      const msgs = [...this.data.messages]
+      const lastMsg = msgs[msgs.length - 1]
+
+      if (lastMsg && lastMsg.role === 'assistant' && lastMsg.toolCalls) {
+        const lastTool = lastMsg.toolCalls[lastMsg.toolCalls.length - 1]
+        lastTool.result = resultContent
+        if (!lastMsg.content) {
+          lastMsg.content = displayText
+        } else if (!lastMsg.content.includes(displayText)) {
+          lastMsg.content = lastMsg.content + '\n' + displayText
+        }
+        this.setData({
+          messages: msgs,
+          streamText: displayText,
+          currentAssistantMsg: lastMsg
+        })
+        return
+      }
+
+      this._appendStreamText(displayText)
     },
 
     handleSSEEvent(event) {
       switch (event.type) {
         case 'text_delta':
-          const newStreamText = this.data.streamText + event.content
-          this.setData({ streamText: newStreamText })
+          this._appendStreamText(event.content || '')
+          break
+
+        case 'record_success':
+          this._appendStreamText(event.content || '')
           break
 
         case 'tool_start':
           if (this.data.streamText) {
-            // Save the text part before tool call
             const assistantMsg = {
               id: Date.now(),
               role: 'assistant',
               content: this.data.streamText,
-              toolCalls: [{ name: event.tool_name, input: JSON.stringify(event.tool_input) }]
+              toolCalls: [{
+                name: event.tool_name,
+                input: JSON.stringify(event.tool_input || {})
+              }]
             }
             const messages = [...this.data.messages, assistantMsg]
             this.setData({ messages, streamText: '', currentAssistantMsg: assistantMsg })
+          } else {
+            this._ensureAssistantToolMessage(event.tool_name, event.tool_input)
           }
           break
 
         case 'tool_result':
-          // Update last assistant message with tool result
-          const msgs = this.data.messages
-          const lastMsg = msgs[msgs.length - 1]
-          if (lastMsg && lastMsg.toolCalls) {
-            const lastTool = lastMsg.toolCalls[lastMsg.toolCalls.length - 1]
-            lastTool.result = event.content
-            this.setData({ messages: msgs })
-          }
+          this._applyToolResult(event.tool_name, event.content || '')
           break
 
         case 'message_stop':
-          if (this.data.streamText) {
-            const finalMsg = {
-              id: Date.now(),
-              role: 'assistant',
-              content: this.data.streamText
-            }
-            const messages = [...this.data.messages, finalMsg]
-            this.setData({ messages, streaming: false, streamText: '' })
-          } else {
-            this.setData({ streaming: false })
-          }
+          this.finalizeStream()
           break
 
         case 'error':
           wx.showToast({ title: event.content || '发生错误', icon: 'none' })
-          this.setData({ streaming: false })
+          this.setData({ streaming: false, streamText: '', currentAssistantMsg: null })
           break
       }
+    },
+
+    finalizeStream() {
+      if (!this.data.streaming && !this.data.streamText && !this.data.currentAssistantMsg) {
+        return
+      }
+
+      const msgs = [...this.data.messages]
+      const streamText = (this.data.streamText || '').trim()
+      const current = this.data.currentAssistantMsg
+
+      if (current) {
+        const idx = msgs.findIndex((m) => m.id === current.id)
+        if (idx >= 0) {
+          if (streamText && !msgs[idx].content) {
+            msgs[idx].content = streamText
+          } else if (streamText && msgs[idx].content && !msgs[idx].content.includes(streamText)) {
+            msgs[idx].content = msgs[idx].content + '\n' + streamText
+          }
+        } else if (streamText || current.content) {
+          msgs.push({
+            id: current.id || Date.now(),
+            role: 'assistant',
+            content: streamText || current.content || '已完成',
+            toolCalls: current.toolCalls
+          })
+        }
+      } else if (streamText) {
+        msgs.push({
+          id: Date.now(),
+          role: 'assistant',
+          content: streamText
+        })
+      }
+
+      this.setData({
+        messages: msgs,
+        streaming: false,
+        streamText: '',
+        currentAssistantMsg: null,
+        scrollToView: 'msg-bottom'
+      })
     },
 
     async chooseFile() {
@@ -199,8 +327,6 @@ Component({
     },
 
     loadHistory() {
-      // Could load recent chat messages from server
-      // For now, show welcome message
       this.setData({
         messages: [{
           id: 1,

@@ -1,6 +1,9 @@
 """对话流式接口：通过 mock 流避免真实调用大模型。"""
 
+import json
 import uuid
+
+from app.services.chat_service import _extra_events_after_tool
 
 
 def _login(client):
@@ -31,6 +34,23 @@ def test_chat_send_rejects_empty_message(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 400
+
+
+def test_extra_events_after_add_transaction_success():
+    result = json.dumps(
+        {"success": True, "message": "已记录支出：¥10.00，类别：餐饮"},
+        ensure_ascii=False,
+    )
+    events = _extra_events_after_tool("add_transaction", result)
+    types = [e["type"] for e in events]
+    assert "record_success" in types
+    assert "text_delta" in types
+    assert any("已记录支出" in e.get("content", "") for e in events)
+
+
+def test_extra_events_after_add_transaction_error():
+    result = json.dumps({"error": "金额必须大于0"}, ensure_ascii=False)
+    assert _extra_events_after_tool("add_transaction", result) == []
 
 
 def test_chat_send_streams_when_mocked(client, monkeypatch):

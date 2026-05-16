@@ -20,7 +20,12 @@ SYSTEM_PROMPT = (
     "- add_transaction: 添加一笔收支记录\n"
     "- query_transactions: 查询收支记录\n"
     "- get_summary: 获取财务汇总\n\n"
-    "请始终使用中文回复。对于用户的每一次财务操作，先确认信息，然后调用相应的工具。"
+    "请始终使用中文回复。\n\n"
+    "重要规则：\n"
+    "1. 每次用户要求记一笔新的收支（即使品类、金额与之前相同），都必须调用 add_transaction 新增一条记录；"
+    "不要因对话历史中已有类似账目而跳过记账。\n"
+    "2. 调用 add_transaction 成功后，用一句话向用户确认已记账（包含金额与类别）。\n"
+    "3. 信息不明确时先简短追问，明确后立刻调用工具。"
 )
 
 TOOLS = [
@@ -117,6 +122,21 @@ aclient = AsyncAnthropic(
 def _format_sse(data: dict) -> str:
     """Format a dict as an SSE data frame."""
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _extra_events_after_tool(tool_name: str, result: str) -> list[dict]:
+    """SSE events to push after a tool finishes (e.g. confirm记账成功)."""
+    events: list[dict] = []
+    if tool_name != "add_transaction":
+        return events
+    try:
+        data = json.loads(result)
+    except json.JSONDecodeError:
+        return events
+    if data.get("success") and data.get("message"):
+        events.append({"type": "record_success", "content": data["message"]})
+        events.append({"type": "text_delta", "content": data["message"]})
+    return events
 
 
 async def _execute_tool(
@@ -359,6 +379,8 @@ async def chat_stream(
                     "tool_use_id": tool_use.id,
                 }
             )
+            for extra in _extra_events_after_tool(tool_use.name, result):
+                yield _format_sse(extra)
 
             # Add tool result as a user message content block
             messages.append(

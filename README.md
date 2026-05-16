@@ -20,12 +20,31 @@
 
 ### 1. 安装依赖
 
+**macOS / Linux（bash）**
+
 ```bash
 cd neizhang-server
 python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+**Windows（PowerShell）**
+
+```powershell
+cd neizhang-server
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+若 PowerShell 提示无法运行脚本，可先执行（仅需一次）：
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Windows（CMD）**：激活虚拟环境用 `.venv\Scripts\activate.bat`，其余命令同上。
 
 ### 2. 配置环境变量
 
@@ -46,24 +65,39 @@ pip install -r requirements.txt
 
 ### 3. 启动
 
+**macOS / Linux**
+
 ```bash
 cd neizhang-server
 source .venv/bin/activate   # 若已激活可省略
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+**Windows（PowerShell）**
+
+```powershell
+cd neizhang-server
+.\.venv\Scripts\Activate.ps1   # 若已激活可省略
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
 - 启动后会自动建库、建表，并在 **`http://127.0.0.1:8000`** 提供服务。
-- 健康检查：**`curl http://127.0.0.1:8000/health`**，返回 `{"status":"ok"}` 即正常。
+- 健康检查：浏览器打开 `http://127.0.0.1:8000/health`，或终端执行：
+  - macOS / Linux：`curl http://127.0.0.1:8000/health`
+  - Windows（PowerShell）：`Invoke-WebRequest http://127.0.0.1:8000/health`
+- 返回 `{"status":"ok"}` 即正常。
 
 ### 4. 自动化测试（pytest）
 
-在 **`neizhang-server`** 目录下安装开发依赖并运行用例（使用独立临时 SQLite 与测试用 JWT 密钥，不读写你本地的 `neizhang.db`）：
+在 **`neizhang-server`** 目录下安装开发依赖并运行用例（使用独立临时 SQLite 与测试用 JWT 密钥，不读写你本地的 `neizhang.db`）。请先激活虚拟环境（见上文），再执行：
 
 ```bash
 cd neizhang-server
 pip install -r requirements-dev.txt
 pytest
 ```
+
+Windows 与 macOS / Linux 命令相同；PowerShell 下同样先 `.\.venv\Scripts\Activate.ps1`。
 
 建议按 **TDD**：先为要改的行为在 `neizhang-server/tests/` 增加或调整用例，再实现功能，最后保持 `pytest` 全绿。
 
@@ -111,7 +145,7 @@ http://127.0.0.1:8000/admin
 
 ### 登录时报 `Error: timeout` 或合法域名错误
 
-多半是当前环境仍在校验域名，按上文 **「本地调试网络」** 勾选不校验或确认 `urlCheck` 已为 `false`，并确保本机 **uvicorn 已在 8000 端口运行**（可先 `curl http://127.0.0.1:8000/health`）。
+多半是当前环境仍在校验域名，按上文 **「本地调试网络」** 勾选不校验或确认 `urlCheck` 已为 `false`，并确保本机 **uvicorn 已在 8000 端口运行**（可先访问 `http://127.0.0.1:8000/health`，或用 `curl` / PowerShell 的 `Invoke-WebRequest` 检查）。
 
 ### 真机预览仍连不上
 
