@@ -11,6 +11,7 @@ Component({
 
   data: {
     currentFilter: 'month',
+    queryEndDate: '',
     teamSummary: null,
     personalSummary: null,
     transactions: [],
@@ -20,16 +21,15 @@ Component({
   observers: {
     refreshNonce(n) {
       if (n > 0) {
-        this.loadData()
+        this.activateAndLoad()
       }
     }
   },
 
   lifetimes: {
     attached() {
-      this._financeRefreshHandler = () => this.loadData()
+      this._financeRefreshHandler = () => this.reloadData()
       app.onFinanceRefresh(this._financeRefreshHandler)
-      this.loadData()
     },
     detached() {
       if (this._financeRefreshHandler) {
@@ -40,30 +40,54 @@ Component({
 
   pageLifetimes: {
     show() {
-      if (app.globalData.financeStale) {
-        app.globalData.financeStale = false
-      }
-      this.loadData()
+      // 由 main 页在切换到财务 Tab 时调用 activateAndLoad
     }
   },
 
   methods: {
-    setFilter(e) {
-      const filter = e.currentTarget.dataset.filter
-      this.setData({ currentFilter: filter })
+    _formatDate(d) {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    },
+
+    _getAnchorDate() {
+      if (this.data.queryEndDate) {
+        const parts = this.data.queryEndDate.split('-').map(Number)
+        return new Date(parts[0], parts[1] - 1, parts[2])
+      }
+      return new Date()
+    },
+
+    /** 打开/切换到财务 Tab：锁定截止日为当前时刻并请求数据 */
+    activateAndLoad() {
+      const endDate = this._formatDate(new Date())
+      this.setData({ queryEndDate: endDate }, () => {
+        this.loadData()
+      })
+    },
+
+    /** 记账成功等刷新：保持原截止日，仅重新请求 */
+    reloadData() {
+      if (!this.data.queryEndDate) {
+        this.activateAndLoad()
+        return
+      }
       this.loadData()
     },
 
-    getDateRange() {
-      const now = new Date()
-      const format = (d) => {
-        const y = d.getFullYear()
-        const m = String(d.getMonth() + 1).padStart(2, '0')
-        const day = String(d.getDate()).padStart(2, '0')
-        return `${y}-${m}-${day}`
-      }
+    setFilter(e) {
+      const filter = e.currentTarget.dataset.filter
+      this.setData({ currentFilter: filter }, () => {
+        this.loadData()
+      })
+    },
 
-      const endDate = format(now)
+    getDateRange() {
+      const format = (d) => this._formatDate(d)
+      const anchor = this._getAnchorDate()
+      const endDate = this.data.queryEndDate || format(anchor)
       let startDate
 
       switch (this.data.currentFilter) {
@@ -71,18 +95,18 @@ Component({
           startDate = endDate
           break
         case 'week': {
-          const day = now.getDay()
+          const day = anchor.getDay()
           const diff = day === 0 ? 6 : day - 1
-          const monday = new Date(now)
-          monday.setDate(now.getDate() - diff)
+          const monday = new Date(anchor)
+          monday.setDate(anchor.getDate() - diff)
           startDate = format(monday)
           break
         }
         case 'month':
-          startDate = format(new Date(now.getFullYear(), now.getMonth(), 1))
+          startDate = format(new Date(anchor.getFullYear(), anchor.getMonth(), 1))
           break
         case 'year':
-          startDate = format(new Date(now.getFullYear(), 0, 1))
+          startDate = format(new Date(anchor.getFullYear(), 0, 1))
           break
         default:
           startDate = '2020-01-01'
@@ -93,6 +117,10 @@ Component({
 
     async loadData() {
       if (!app.globalData.token) return
+      if (!this.data.queryEndDate) {
+        this.activateAndLoad()
+        return
+      }
 
       const dateRange = this.getDateRange()
       this.setData({ loading: true })

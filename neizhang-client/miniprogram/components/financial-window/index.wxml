@@ -1,6 +1,7 @@
 <view class="finance-window">
   <!-- Time range filter -->
   <view class="filter-bar">
+    <view class="filter-hint" wx:if="{{queryEndDate}}">截止至 {{queryEndDate}}</view>
     <view class="filter-option {{currentFilter === 'today' ? 'active' : ''}}" bindtap="setFilter" data-filter="today">本日</view>
     <view class="filter-option {{currentFilter === 'week' ? 'active' : ''}}" bindtap="setFilter" data-filter="week">本周</view>
     <view class="filter-option {{currentFilter === 'month' ? 'active' : ''}}" bindtap="setFilter" data-filter="month">本月</view>

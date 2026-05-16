@@ -7,10 +7,19 @@
 
 .filter-bar {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   background-color: #fff;
   padding: 20rpx 30rpx;
   border-bottom: 1px solid #e5e5e5;
   gap: 16rpx;
+}
+
+.filter-hint {
+  width: 100%;
+  font-size: 22rpx;
+  color: #999;
+  margin-bottom: 4rpx;
 }
 
 .filter-option {

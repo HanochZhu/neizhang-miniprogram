@@ -18,11 +18,8 @@ Page({
   },
 
   refreshFinanceTab() {
+    // 更新 nonce 触发 financial-window 的 observer，锁定新截止日并请求
     this.setData({ financeRefreshNonce: Date.now() })
-    const finance = this.selectComponent('#financeWin')
-    if (finance && typeof finance.loadData === 'function') {
-      finance.loadData()
-    }
   },
 
   switchTab(e) {
