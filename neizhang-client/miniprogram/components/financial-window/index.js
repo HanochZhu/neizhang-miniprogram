@@ -11,12 +11,22 @@ Component({
 
   lifetimes: {
     attached() {
+      this._financeRefreshHandler = () => this.loadData()
+      app.onFinanceRefresh(this._financeRefreshHandler)
       this.loadData()
+    },
+    detached() {
+      if (this._financeRefreshHandler) {
+        app.offFinanceRefresh(this._financeRefreshHandler)
+      }
     }
   },
 
   pageLifetimes: {
     show() {
+      if (app.globalData.financeStale) {
+        app.globalData.financeStale = false
+      }
       this.loadData()
     }
   },
@@ -37,24 +47,26 @@ Component({
         return `${y}-${m}-${day}`
       }
 
-      let startDate, endDate
-      endDate = format(now)
+      const endDate = format(now)
+      let startDate
 
       switch (this.data.currentFilter) {
         case 'today':
           startDate = endDate
           break
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          startDate = format(weekAgo)
+        case 'week': {
+          const day = now.getDay()
+          const diff = day === 0 ? 6 : day - 1
+          const monday = new Date(now)
+          monday.setDate(now.getDate() - diff)
+          startDate = format(monday)
           break
+        }
         case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-          startDate = format(monthAgo)
+          startDate = format(new Date(now.getFullYear(), now.getMonth(), 1))
           break
         case 'year':
-          const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
-          startDate = format(yearAgo)
+          startDate = format(new Date(now.getFullYear(), 0, 1))
           break
         default:
           startDate = '2020-01-01'

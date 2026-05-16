@@ -1,6 +1,11 @@
 """财务汇总等需登录的接口。"""
 
+import asyncio
 import uuid
+from datetime import datetime
+
+from app.database import async_session_factory
+from app.models.transaction import Transaction
 
 
 def _phone_login(client):
@@ -10,7 +15,8 @@ def _phone_login(client):
         json={"phone": phone, "name": "财务测试"},
     )
     assert r.status_code == 200
-    return r.json()["token"]
+    data = r.json()
+    return data["token"], data["user_id"], data["team_id"]
 
 
 def test_finance_summary_requires_auth(client):
@@ -18,8 +24,40 @@ def test_finance_summary_requires_auth(client):
     assert r.status_code == 401
 
 
+def test_finance_summary_includes_transaction_on_same_day(client):
+    token, user_id, team_id = _phone_login(client)
+    amount = 66.6 + (uuid.uuid4().int % 100)
+
+    async def _insert():
+        async with async_session_factory() as db:
+            db.add(
+                Transaction(
+                    team_id=team_id,
+                    user_id=user_id,
+                    type="expense",
+                    amount=amount,
+                    category="测试",
+                    transaction_date=datetime.now(),
+                )
+            )
+            await db.commit()
+
+    asyncio.run(_insert())
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    r = client.get(
+        "/api/v1/finance/summary",
+        params={"scope": "team", "start_date": today, "end_date": today},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["expense_total"] >= amount
+    assert data["transaction_count"] >= 1
+
+
 def test_finance_summary_with_token(client):
-    token = _phone_login(client)
+    token, _, _ = _phone_login(client)
     r = client.get(
         "/api/v1/finance/summary",
         headers={"Authorization": f"Bearer {token}"},
@@ -35,7 +73,7 @@ def test_finance_summary_with_token(client):
 
 
 def test_finance_summary_invalid_date(client):
-    token = _phone_login(client)
+    token, _, _ = _phone_login(client)
     r = client.get(
         "/api/v1/finance/summary",
         params={"start_date": "not-a-date"},

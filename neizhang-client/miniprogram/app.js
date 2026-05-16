@@ -38,8 +38,34 @@ App({
     wx.redirectTo({ url: '/pages/login/login' })
   },
 
-  /** 记账成功后通知财务页刷新（由 main 页挂载的 financial-window 处理） */
+  onFinanceRefresh(listener) {
+    if (!this._financeRefreshListeners) {
+      this._financeRefreshListeners = []
+    }
+    if (typeof listener === 'function') {
+      this._financeRefreshListeners.push(listener)
+    }
+  },
+
+  offFinanceRefresh(listener) {
+    if (!this._financeRefreshListeners) return
+    this._financeRefreshListeners = this._financeRefreshListeners.filter(
+      (fn) => fn !== listener
+    )
+  },
+
+  /** 记账成功后通知财务页刷新 */
   refreshFinanceData() {
+    this.globalData.financeStale = true
+    if (this._financeRefreshListeners) {
+      this._financeRefreshListeners.forEach((fn) => {
+        try {
+          fn()
+        } catch (e) {
+          console.error('finance refresh listener error', e)
+        }
+      })
+    }
     const pages = getCurrentPages()
     if (!pages.length) return
     const page = pages[pages.length - 1]

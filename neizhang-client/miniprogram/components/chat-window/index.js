@@ -333,6 +333,16 @@ Component({
 
         case 'tool_result':
           this._applyToolResult(event.tool_name, event.content || '')
+          if (event.tool_name === 'add_transaction') {
+            try {
+              const parsed = JSON.parse(event.content || '{}')
+              if (parsed.success) {
+                this._notifyFinanceRefresh()
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
           break
 
         case 'message_stop':

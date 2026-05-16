@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.transaction import Transaction
 from app.routers.auth import get_current_user
+from app.utils.dates import parse_end_date_exclusive, parse_start_date
 
 router = APIRouter(prefix="/api/v1/finance", tags=["finance"])
 
@@ -36,8 +36,9 @@ async def get_finance_summary(
         base_conditions.append(Transaction.user_id == user_id)
     if start_date:
         try:
-            dt_start = datetime.strptime(start_date, "%Y-%m-%d")
-            base_conditions.append(Transaction.transaction_date >= dt_start)
+            base_conditions.append(
+                Transaction.transaction_date >= parse_start_date(start_date)
+            )
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -45,8 +46,9 @@ async def get_finance_summary(
             )
     if end_date:
         try:
-            dt_end = datetime.strptime(end_date, "%Y-%m-%d")
-            base_conditions.append(Transaction.transaction_date <= dt_end)
+            base_conditions.append(
+                Transaction.transaction_date < parse_end_date_exclusive(end_date)
+            )
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

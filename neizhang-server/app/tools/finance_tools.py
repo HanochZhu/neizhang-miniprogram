@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.transaction import Transaction
 from app.models.transaction_proposal import TransactionProposal
+from app.utils.dates import parse_end_date_exclusive, parse_start_date
 
 
 async def propose_transaction(
@@ -165,9 +166,11 @@ async def query_transactions(
     if user_id is not None:
         query = query.where(Transaction.user_id == user_id)
     if start_date:
-        query = query.where(Transaction.transaction_date >= datetime.strptime(start_date, "%Y-%m-%d"))
+        query = query.where(Transaction.transaction_date >= parse_start_date(start_date))
     if end_date:
-        query = query.where(Transaction.transaction_date <= datetime.strptime(end_date, "%Y-%m-%d"))
+        query = query.where(
+            Transaction.transaction_date < parse_end_date_exclusive(end_date)
+        )
     if category:
         query = query.where(Transaction.category == category)
     if product:
@@ -219,9 +222,11 @@ async def get_summary(
     if scope == "personal" and user_id is not None:
         base_cond.append(Transaction.user_id == user_id)
     if start_date:
-        base_cond.append(Transaction.transaction_date >= datetime.strptime(start_date, "%Y-%m-%d"))
+        base_cond.append(Transaction.transaction_date >= parse_start_date(start_date))
     if end_date:
-        base_cond.append(Transaction.transaction_date <= datetime.strptime(end_date, "%Y-%m-%d"))
+        base_cond.append(
+            Transaction.transaction_date < parse_end_date_exclusive(end_date)
+        )
 
     # Income total
     income_query = select(sa_func.coalesce(sa_func.sum(Transaction.amount), 0.0)).where(

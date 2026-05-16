@@ -21,12 +21,13 @@ Page({
 
   switchTab(e) {
     const index = parseInt(e.currentTarget.dataset.index)
-    this.setData({ currentTab: index })
-    if (index === 1) {
-      const finance = this.selectComponent('#financeWin')
-      if (finance && typeof finance.loadData === 'function') {
-        finance.loadData()
+    this.setData({ currentTab: index }, () => {
+      if (index === 1) {
+        const finance = this.selectComponent('#financeWin')
+        if (finance && typeof finance.loadData === 'function') {
+          finance.loadData()
+        }
       }
-    }
+    })
   }
 })
