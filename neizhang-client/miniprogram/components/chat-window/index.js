@@ -165,7 +165,7 @@ Component({
       const assistantMsg = {
         id: Date.now(),
         role: 'assistant',
-        content: this.data.streamText || '',
+        content: (this._streamBuffer || this.data.streamText || '').trim(),
         toolCalls: [{
           name: toolName,
           input: typeof toolInput === 'string' ? toolInput : JSON.stringify(toolInput || {})
@@ -310,12 +310,13 @@ Component({
           )
           break
 
-        case 'tool_start':
-          if (this.data.streamText) {
+        case 'tool_start': {
+          const bufferedText = (this._streamBuffer || this.data.streamText || '').trim()
+          if (bufferedText) {
             const assistantMsg = {
               id: Date.now(),
               role: 'assistant',
-              content: this.data.streamText,
+              content: bufferedText,
               toolCalls: [{
                 name: event.tool_name,
                 input: JSON.stringify(event.tool_input || {})
@@ -328,6 +329,7 @@ Component({
             this._ensureAssistantToolMessage(event.tool_name, event.tool_input)
           }
           break
+        }
 
         case 'tool_result':
           this._applyToolResult(event.tool_name, event.content || '')
@@ -449,12 +451,25 @@ Component({
           updated = true
         }
       } else if (streamText) {
-        msgs.push({
-          id: Date.now(),
-          role: 'assistant',
-          content: streamText
-        })
-        updated = true
+        const lastMsg = msgs[msgs.length - 1]
+        const needsNew =
+          !lastMsg ||
+          lastMsg.role === 'user' ||
+          (lastMsg.role === 'assistant' && !(lastMsg.content || '').trim())
+        if (needsNew) {
+          msgs.push({
+            id: Date.now(),
+            role: 'assistant',
+            content: streamText
+          })
+          updated = true
+        } else if (lastMsg.role === 'assistant' && !(lastMsg.content || '').includes(streamText)) {
+          msgs[msgs.length - 1] = {
+            ...lastMsg,
+            content: ((lastMsg.content || '') + '\n' + streamText).trim()
+          }
+          updated = true
+        }
       }
 
       this._streamFinalized = true

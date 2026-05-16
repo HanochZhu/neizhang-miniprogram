@@ -13,7 +13,7 @@
         <!-- Assistant message -->
         <view class="message assistant-message" wx:elif="{{item.role === 'assistant'}}">
           <view class="bubble assistant-bubble">
-            <wd-markdown content="{{item.content}}" wx:if="{{item.content}}"/>
+            <wd-markdown markdown="{{item.content}}" wx:if="{{item.content}}"/>
             <!-- 待确认记账 -->
             <view
               wx:if="{{item.pendingConfirm && item.pendingConfirm.status === 'pending'}}"
