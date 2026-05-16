@@ -8,8 +8,10 @@ except ImportError:
 
 class Settings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com/anthropic"
+    deepseek_openai_base_url: str = "https://api.deepseek.com"
     deepseek_api_key: str = ""
     deepseek_model: str = "deepseek-v4-pro"
+    deepseek_vision_model: str = "deepseek-chat"
 
     jwt_secret: str = secrets.token_hex(32)
     jwt_algorithm: str = "HS256"

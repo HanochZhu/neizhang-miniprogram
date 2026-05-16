@@ -5,7 +5,7 @@
   </view>
 
   <view class="content" hidden="{{currentTab !== 1}}">
-    <financial-window id="financeWin" />
+    <financial-window id="financeWin" refresh-nonce="{{financeRefreshNonce}}" />
   </view>
 
   <!-- Custom tab bar -->

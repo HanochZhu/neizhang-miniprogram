@@ -69,6 +69,10 @@ App({
     const pages = getCurrentPages()
     if (!pages.length) return
     const page = pages[pages.length - 1]
+    if (page && typeof page.refreshFinanceTab === 'function') {
+      page.refreshFinanceTab()
+      return
+    }
     const finance = page.selectComponent && page.selectComponent('#financeWin')
     if (finance && typeof finance.loadData === 'function') {
       finance.loadData()

@@ -2,11 +2,27 @@ const app = getApp()
 const api = require('../../services/api')
 
 Component({
+  properties: {
+    refreshNonce: {
+      type: Number,
+      value: 0
+    }
+  },
+
   data: {
     currentFilter: 'month',
     teamSummary: null,
     personalSummary: null,
-    transactions: []
+    transactions: [],
+    loading: false
+  },
+
+  observers: {
+    refreshNonce(n) {
+      if (n > 0) {
+        this.loadData()
+      }
+    }
   },
 
   lifetimes: {
@@ -76,9 +92,10 @@ Component({
     },
 
     async loadData() {
-      if (!app.checkLogin()) return
+      if (!app.globalData.token) return
 
       const dateRange = this.getDateRange()
+      this.setData({ loading: true })
 
       try {
         const [teamRes, personalRes] = await Promise.all([
@@ -86,13 +103,16 @@ Component({
           api.get('/api/v1/finance/summary', { scope: 'personal', ...dateRange })
         ])
 
+        app.globalData.financeStale = false
         this.setData({
           teamSummary: teamRes,
           personalSummary: personalRes,
-          transactions: (teamRes.transactions || []).slice(0, 20)
+          transactions: (teamRes.transactions || []).slice(0, 20),
+          loading: false
         })
       } catch (err) {
         console.error('Failed to load finance data:', err)
+        this.setData({ loading: false })
       }
     }
   }

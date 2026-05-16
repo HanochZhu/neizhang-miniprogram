@@ -104,7 +104,12 @@ Component({
       }
     },
 
-    streamChat(message) {
+    _isImageFile(name) {
+      return /\.(png|jpe?g|gif|webp|bmp)$/i.test(name || '')
+    },
+
+    _startSSEStream(url, data, options = {}) {
+      const { finalizeOnEnd = true } = options
       return new Promise((resolve, reject) => {
         const token = app.globalData.token
         const that = this
@@ -116,26 +121,35 @@ Component({
           if (that._streamEnded) return
           that._streamEnded = true
           that._flushSSEBuffer()
-          if (!that._sseMessageStop) {
+          if (finalizeOnEnd && !that._sseMessageStop) {
             that.finalizeStream()
+          } else if (!finalizeOnEnd) {
+            that.setData({ streaming: false, streamText: '' })
           }
           if (err) reject(err)
           else resolve()
         }
 
         const task = wx.request({
-          url: app.globalData.serverUrl + '/api/v1/chat/send',
+          url: app.globalData.serverUrl + url,
           method: 'POST',
           header: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          data: { message },
+          data,
           enableChunked: true,
           responseType: 'text',
           success: (res) => {
             if (res.statusCode >= 400) {
-              finish(new Error(res.data?.detail || '请求失败'))
+              let detail = '请求失败'
+              try {
+                const body = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+                detail = body?.detail || detail
+              } catch (e) {
+                // ignore
+              }
+              finish(new Error(detail))
               return
             }
             if (res.data && !that._sseMessageStop) {
@@ -157,6 +171,20 @@ Component({
           }
         })
       })
+    },
+
+    streamChat(message) {
+      return this._startSSEStream('/api/v1/chat/send', { message })
+    },
+
+    analyzeImage(fileId) {
+      this.setData({
+        streaming: true,
+        streamText: '',
+        currentAssistantMsg: null,
+        scrollToView: 'msg-bottom'
+      })
+      return this._startSSEStream('/api/v1/chat/analyze-image', { file_id: fileId })
     },
 
     _ensureAssistantToolMessage(toolName, toolInput) {
@@ -295,6 +323,7 @@ Component({
             transaction: event.transaction || {},
             status: 'pending'
           })
+          this._sseMessageStop = true
           break
 
         case 'proposal_confirmed':
@@ -367,52 +396,13 @@ Component({
     },
 
     streamConfirm(proposalId, confirmed) {
-      const token = app.globalData.token
-      const that = this
-      that._sseBuffer = ''
-      that._streamEnded = false
-      that._resetStreamState()
-      that.setData({ streaming: true, streamText: '' })
-
-      const finish = (err) => {
-        if (that._streamEnded) return
-        that._streamEnded = true
-        that._flushSSEBuffer()
-        that.setData({ streaming: false, streamText: '' })
-        if (err) wx.showToast({ title: err.message || '操作失败', icon: 'none' })
-      }
-
-      const task = wx.request({
-        url: app.globalData.serverUrl + '/api/v1/chat/confirm',
-        method: 'POST',
-        header: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        data: { proposal_id: proposalId, confirmed },
-        enableChunked: true,
-        responseType: 'text',
-        success: (res) => {
-          if (res.statusCode >= 400) {
-            finish(new Error(res.data?.detail || '请求失败'))
-            return
-          }
-          if (res.data && !that._sseMessageStop) {
-            that._processSSEChunk(res.data)
-          }
-          finish()
-        },
-        fail: (err) => {
-          finish(new Error('请求失败: ' + err.errMsg))
-        }
-      })
-
-      task.onChunkReceived((res) => {
-        try {
-          that._processSSEChunk(res.data)
-        } catch (e) {
-          console.error('Confirm chunk error:', e)
-        }
+      this.setData({ streaming: true, streamText: '', currentAssistantMsg: null })
+      return this._startSSEStream(
+        '/api/v1/chat/confirm',
+        { proposal_id: proposalId, confirmed },
+        { finalizeOnEnd: false }
+      ).catch((err) => {
+        wx.showToast({ title: err.message || '操作失败', icon: 'none' })
       })
     },
 
@@ -490,24 +480,35 @@ Component({
         streamText: '',
         currentAssistantMsg: null,
         scrollToView: 'msg-bottom'
+      }, () => {
+        this.setData({ scrollToView: 'msg-bottom' })
       })
     },
 
-    async chooseFile() {
+    chooseFile() {
       const that = this
-      wx.chooseMessageFile({
+      wx.chooseMedia({
         count: 1,
-        type: 'all',
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
         success(res) {
-          const file = res.tempFiles[0]
-          that.uploadFile(file)
+          const item = res.tempFiles[0]
+          const name = item.name || `image_${Date.now()}.jpg`
+          that.uploadFile({ path: item.tempFilePath, name, size: item.size })
         }
       })
     },
 
-    async uploadFile(file) {
+    previewImage(e) {
+      const url = e.currentTarget.dataset.url
+      if (!url) return
+      wx.previewImage({ urls: [url], current: url })
+    },
+
+    uploadFile(file) {
       wx.showLoading({ title: '上传中...' })
       const token = app.globalData.token
+      const that = this
 
       wx.uploadFile({
         url: app.globalData.serverUrl + '/api/v1/files/upload',
@@ -520,13 +521,27 @@ Component({
           wx.hideLoading()
           if (res.statusCode === 200) {
             const data = JSON.parse(res.data)
+            const fullUrl = data.url.startsWith('http')
+              ? data.url
+              : app.globalData.serverUrl + data.url
+            const isImage = that._isImageFile(file.name)
             const fileMsg = {
               id: Date.now(),
               role: 'user',
-              file: { name: file.name, url: data.url }
+              file: {
+                id: data.id,
+                name: file.name,
+                url: fullUrl,
+                isImage
+              }
             }
-            const messages = [...this.data.messages, fileMsg]
-            this.setData({ messages })
+            const messages = [...that.data.messages, fileMsg]
+            that.setData({ messages, scrollToView: 'msg-bottom' })
+            if (isImage && data.id) {
+              that.analyzeImage(data.id).catch((err) => {
+                wx.showToast({ title: err.message || '图片识别失败', icon: 'none' })
+              })
+            }
           } else {
             wx.showToast({ title: '上传失败', icon: 'none' })
           }

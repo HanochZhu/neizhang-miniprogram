@@ -2,7 +2,8 @@ const app = getApp()
 
 Page({
   data: {
-    currentTab: 0
+    currentTab: 0,
+    financeRefreshNonce: 0
   },
 
   onLoad() {
@@ -12,10 +13,15 @@ Page({
   onShow() {
     if (!app.checkLogin()) return
     if (this.data.currentTab === 1) {
-      const finance = this.selectComponent('#financeWin')
-      if (finance && typeof finance.loadData === 'function') {
-        finance.loadData()
-      }
+      this.refreshFinanceTab()
+    }
+  },
+
+  refreshFinanceTab() {
+    this.setData({ financeRefreshNonce: Date.now() })
+    const finance = this.selectComponent('#financeWin')
+    if (finance && typeof finance.loadData === 'function') {
+      finance.loadData()
     }
   },
 
@@ -23,10 +29,7 @@ Page({
     const index = parseInt(e.currentTarget.dataset.index)
     this.setData({ currentTab: index }, () => {
       if (index === 1) {
-        const finance = this.selectComponent('#financeWin')
-        if (finance && typeof finance.loadData === 'function') {
-          finance.loadData()
-        }
+        this.refreshFinanceTab()
       }
     })
   }

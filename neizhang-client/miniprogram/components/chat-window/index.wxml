@@ -3,8 +3,23 @@
   <scroll-view class="message-list" scroll-y scroll-into-view="{{scrollToView}}" scroll-with-animation>
     <view class="messages">
       <block wx:for="{{messages}}" wx:key="id">
-        <!-- User message -->
-        <view class="message user-message" wx:if="{{item.role === 'user'}}">
+        <!-- User image/file message -->
+        <view class="message user-message" wx:if="{{item.role === 'user' && item.file}}">
+          <view class="bubble user-bubble file-bubble">
+            <image
+              wx:if="{{item.file.isImage}}"
+              class="msg-image"
+              src="{{item.file.url}}"
+              mode="widthFix"
+              bindtap="previewImage"
+              data-url="{{item.file.url}}"
+            />
+            <chat-file wx:else file="{{item.file}}" />
+          </view>
+        </view>
+
+        <!-- User text message -->
+        <view class="message user-message" wx:elif="{{item.role === 'user'}}">
           <view class="bubble user-bubble">
             <text>{{item.content}}</text>
           </view>
@@ -80,12 +95,6 @@
           </view>
         </view>
 
-        <!-- File message -->
-        <view class="message user-message" wx:if="{{item.file}}">
-          <view class="bubble user-bubble">
-            <chat-file file="{{item.file}}" />
-          </view>
-        </view>
       </block>
 
       <!-- Typing indicator -->
