@@ -1,5 +1,6 @@
 {
   "component": true,
+  "styleIsolation": "apply-shared",
   "usingComponents": {
     "wd-markdown": "/components/agent-ui/wd-markdown/index",
     "collapse-card": "/components/agent-ui/collapse/index",

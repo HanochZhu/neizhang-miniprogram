@@ -1,7 +1,7 @@
 <view class="main-page">
   <!-- Content area - switch between views -->
-  <view class="content" hidden="{{currentTab !== 0}}">
-    <chat-window id="chatWin" />
+  <view class="content chat-content" hidden="{{currentTab !== 0}}">
+    <chat-window id="chatWin" class="chat-panel" />
   </view>
 
   <view class="content" hidden="{{currentTab !== 1}}">
