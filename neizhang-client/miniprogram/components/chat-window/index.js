@@ -18,6 +18,19 @@ Component({
   },
 
   methods: {
+    _resetStreamState() {
+      this._streamBuffer = ''
+      this._sseMessageStop = false
+      this._streamFinalized = false
+    },
+
+    _notifyFinanceRefresh() {
+      const app = getApp()
+      if (app && typeof app.refreshFinanceData === 'function') {
+        app.refreshFinanceData()
+      }
+    },
+
     onInput(e) {
       this.setData({ inputText: e.detail.value })
     },
@@ -28,6 +41,8 @@ Component({
 
       const userMsg = { id: Date.now(), role: 'user', content: text }
       const messages = [...this.data.messages, userMsg]
+
+      this._resetStreamState()
 
       this.setData({
         messages,
@@ -95,12 +110,15 @@ Component({
         const that = this
         that._sseBuffer = ''
         that._streamEnded = false
+        that._resetStreamState()
 
         const finish = (err) => {
           if (that._streamEnded) return
           that._streamEnded = true
           that._flushSSEBuffer()
-          that.finalizeStream()
+          if (!that._sseMessageStop) {
+            that.finalizeStream()
+          }
           if (err) reject(err)
           else resolve()
         }
@@ -120,7 +138,9 @@ Component({
               finish(new Error(res.data?.detail || '请求失败'))
               return
             }
-            if (res.data) that._processSSEChunk(res.data)
+            if (res.data && !that._sseMessageStop) {
+              that._processSSEChunk(res.data)
+            }
             finish()
           },
           fail: (err) => {
@@ -152,6 +172,7 @@ Component({
         }]
       }
       const messages = [...this.data.messages, assistantMsg]
+      this._streamBuffer = ''
       this.setData({
         messages,
         streamText: '',
@@ -161,7 +182,8 @@ Component({
 
     _appendStreamText(text) {
       if (!text) return
-      this.setData({ streamText: this.data.streamText + text })
+      this._streamBuffer = (this._streamBuffer || '') + text
+      this.setData({ streamText: this._streamBuffer })
     },
 
     _applyToolResult(toolName, resultContent) {
@@ -185,6 +207,7 @@ Component({
         } else if (!lastMsg.content.includes(displayText)) {
           lastMsg.content = lastMsg.content + '\n' + displayText
         }
+        this._streamBuffer = displayText
         this.setData({
           messages: msgs,
           streamText: displayText,
@@ -261,6 +284,7 @@ Component({
 
         case 'record_success':
           this._appendStreamText(event.content || '')
+          this._notifyFinanceRefresh()
           break
 
         case 'confirmation_required':
@@ -275,6 +299,7 @@ Component({
 
         case 'proposal_confirmed':
           this._resolvePendingConfirm(event.proposal_id, 'confirmed')
+          this._notifyFinanceRefresh()
           break
 
         case 'proposal_cancelled':
@@ -297,6 +322,7 @@ Component({
               }]
             }
             const messages = [...this.data.messages, assistantMsg]
+            this._streamBuffer = ''
             this.setData({ messages, streamText: '', currentAssistantMsg: assistantMsg })
           } else {
             this._ensureAssistantToolMessage(event.tool_name, event.tool_input)
@@ -308,7 +334,10 @@ Component({
           break
 
         case 'message_stop':
-          this.finalizeStream()
+          if (!this._sseMessageStop) {
+            this._sseMessageStop = true
+            this.finalizeStream()
+          }
           break
 
         case 'error':
@@ -330,6 +359,7 @@ Component({
       const that = this
       that._sseBuffer = ''
       that._streamEnded = false
+      that._resetStreamState()
       that.setData({ streaming: true, streamText: '' })
 
       const finish = (err) => {
@@ -355,7 +385,9 @@ Component({
             finish(new Error(res.data?.detail || '请求失败'))
             return
           }
-          if (res.data) that._processSSEChunk(res.data)
+          if (res.data && !that._sseMessageStop) {
+            that._processSSEChunk(res.data)
+          }
           finish()
         },
         fail: (err) => {
@@ -373,27 +405,39 @@ Component({
     },
 
     finalizeStream() {
+      if (this._streamFinalized) return
+
       const last = this.data.messages[this.data.messages.length - 1]
       if (last && last.pendingConfirm && last.pendingConfirm.status === 'pending') {
+        this._streamFinalized = true
+        this._streamBuffer = ''
         this.setData({ streaming: false, streamText: '', currentAssistantMsg: null })
         return
       }
 
-      if (!this.data.streaming && !this.data.streamText && !this.data.currentAssistantMsg) {
+      const streamText = (this._streamBuffer || this.data.streamText || '').trim()
+      const current = this.data.currentAssistantMsg
+
+      if (!this.data.streaming && !streamText && !current) {
         return
       }
 
       const msgs = [...this.data.messages]
-      const streamText = (this.data.streamText || '').trim()
-      const current = this.data.currentAssistantMsg
+      let updated = false
 
       if (current) {
         const idx = msgs.findIndex((m) => m.id === current.id)
         if (idx >= 0) {
-          if (streamText && !msgs[idx].content) {
-            msgs[idx].content = streamText
-          } else if (streamText && msgs[idx].content && !msgs[idx].content.includes(streamText)) {
-            msgs[idx].content = msgs[idx].content + '\n' + streamText
+          const existing = msgs[idx].content || ''
+          if (streamText && !existing) {
+            msgs[idx] = { ...msgs[idx], content: streamText }
+            updated = true
+          } else if (streamText && existing && !existing.includes(streamText)) {
+            msgs[idx] = { ...msgs[idx], content: existing + '\n' + streamText }
+            updated = true
+          } else if (!existing && current.content) {
+            msgs[idx] = { ...msgs[idx], content: current.content }
+            updated = true
           }
         } else if (streamText || current.content) {
           msgs.push({
@@ -402,6 +446,7 @@ Component({
             content: streamText || current.content || '已完成',
             toolCalls: current.toolCalls
           })
+          updated = true
         }
       } else if (streamText) {
         msgs.push({
@@ -409,10 +454,13 @@ Component({
           role: 'assistant',
           content: streamText
         })
+        updated = true
       }
 
+      this._streamFinalized = true
+      this._streamBuffer = ''
       this.setData({
-        messages: msgs,
+        messages: updated ? msgs : this.data.messages,
         streaming: false,
         streamText: '',
         currentAssistantMsg: null,

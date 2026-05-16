@@ -36,5 +36,16 @@ App({
     wx.removeStorageSync('token')
     wx.removeStorageSync('userInfo')
     wx.redirectTo({ url: '/pages/login/login' })
+  },
+
+  /** 记账成功后通知财务页刷新（由 main 页挂载的 financial-window 处理） */
+  refreshFinanceData() {
+    const pages = getCurrentPages()
+    if (!pages.length) return
+    const page = pages[pages.length - 1]
+    const finance = page.selectComponent && page.selectComponent('#financeWin')
+    if (finance && typeof finance.loadData === 'function') {
+      finance.loadData()
+    }
   }
 })

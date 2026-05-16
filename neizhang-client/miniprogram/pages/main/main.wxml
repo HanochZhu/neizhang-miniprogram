@@ -1,11 +1,11 @@
 <view class="main-page">
   <!-- Content area - switch between views -->
   <view class="content" hidden="{{currentTab !== 0}}">
-    <chat-window />
+    <chat-window id="chatWin" />
   </view>
 
   <view class="content" hidden="{{currentTab !== 1}}">
-    <financial-window />
+    <financial-window id="financeWin" />
   </view>
 
   <!-- Custom tab bar -->
