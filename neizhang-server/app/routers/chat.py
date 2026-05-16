@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.database import get_db
 from app.routers.auth import get_current_user
+from app.database import stream_with_db
 from app.services.chat_service import chat_stream, confirm_proposal_stream
 
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
@@ -31,7 +29,6 @@ def _sse_headers() -> dict:
 async def send_message(
     request: ChatRequest,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Send a chat message and stream the AI response via SSE."""
     user_id = current_user.get("user_id")
@@ -49,13 +46,17 @@ async def send_message(
             detail="Message cannot be empty",
         )
 
-    return StreamingResponse(
-        chat_stream(
+    async def _factory(db):
+        async for chunk in chat_stream(
             team_id=team_id,
             user_id=user_id,
             user_message=request.message.strip(),
             db=db,
-        ),
+        ):
+            yield chunk
+
+    return StreamingResponse(
+        stream_with_db(_factory),
         media_type="text/event-stream",
         headers=_sse_headers(),
     )
@@ -65,7 +66,6 @@ async def send_message(
 async def confirm_proposal(
     request: ConfirmRequest,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """用户确认或取消待记账提案，流式返回处理结果。"""
     user_id = current_user.get("user_id")
@@ -83,14 +83,20 @@ async def confirm_proposal(
             detail="proposal_id is required",
         )
 
-    return StreamingResponse(
-        confirm_proposal_stream(
-            proposal_id=request.proposal_id.strip(),
+    proposal_id = request.proposal_id.strip()
+
+    async def _factory(db):
+        async for chunk in confirm_proposal_stream(
+            proposal_id=proposal_id,
             confirmed=request.confirmed,
             team_id=team_id,
             user_id=user_id,
             db=db,
-        ),
+        ):
+            yield chunk
+
+    return StreamingResponse(
+        stream_with_db(_factory),
         media_type="text/event-stream",
         headers=_sse_headers(),
     )

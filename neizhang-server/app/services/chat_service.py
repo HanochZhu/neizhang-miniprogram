@@ -219,6 +219,13 @@ def _extra_events_after_tool(tool_name: str, result: str) -> list[dict]:
     return events
 
 
+async def _commit_if_success(db: AsyncSession, result: str) -> None:
+    """Persist write-tool results immediately (stream may end later)."""
+    data = _parse_tool_result(result)
+    if data.get("success"):
+        await db.commit()
+
+
 async def _execute_tool(
     tool_name: str,
     tool_input: dict,
@@ -228,7 +235,7 @@ async def _execute_tool(
 ) -> str:
     """Execute a finance tool and return the result string."""
     if tool_name == "propose_transaction":
-        return await propose_transaction(
+        result = await propose_transaction(
             team_id=team_id,
             user_id=user_id,
             tx_type=tool_input.get("type", ""),
@@ -240,8 +247,10 @@ async def _execute_tool(
             transaction_date=tool_input.get("transaction_date"),
             db=db,
         )
+        await _commit_if_success(db, result)
+        return result
     elif tool_name == "add_transaction":
-        return await add_transaction(
+        result = await add_transaction(
             team_id=team_id,
             user_id=user_id,
             tx_type=tool_input.get("type", ""),
@@ -252,6 +261,8 @@ async def _execute_tool(
             transaction_date=tool_input.get("transaction_date"),
             db=db,
         )
+        await _commit_if_success(db, result)
+        return result
     elif tool_name == "query_transactions":
         return await query_transactions(
             team_id=team_id,

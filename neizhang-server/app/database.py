@@ -41,3 +41,19 @@ async def get_db():
             raise
         finally:
             await session.close()
+
+
+async def stream_with_db(stream_factory):
+    """Wrap an async SSE generator so DB writes commit after the stream finishes.
+
+    StreamingResponse must not use Depends(get_db): the session is torn down
+    before the generator runs, so flush() without commit loses all data.
+    """
+    async with async_session_factory() as session:
+        try:
+            async for chunk in stream_factory(session):
+                yield chunk
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

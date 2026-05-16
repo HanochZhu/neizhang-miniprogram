@@ -116,7 +116,7 @@
         show-confirm-bar="{{false}}"
       />
       <view class="send-btn {{inputText ? 'active' : ''}}" bindtap="sendMessage">
-        <image class="send-icon" src="/components/agent-ui/imgs/send.svg" mode="aspectFit" />
+        <text class="send-symbol">↑</text>
       </view>
     </view>
   </view>

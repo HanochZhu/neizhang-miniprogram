@@ -178,14 +178,30 @@
   flex-shrink: 0;
 }
 
-.attach-icon, .send-icon {
+.attach-icon {
   width: 44rpx;
   height: 44rpx;
   opacity: 0.6;
 }
 
-.send-btn.active .send-icon {
-  opacity: 1;
+.send-btn {
+  background: #e8e8e8;
+  border-radius: 50%;
+}
+
+.send-btn.active {
+  background: #1989fa;
+}
+
+.send-symbol {
+  font-size: 36rpx;
+  line-height: 1;
+  color: #999;
+  font-weight: bold;
+}
+
+.send-btn.active .send-symbol {
+  color: #fff;
 }
 
 .text-input {

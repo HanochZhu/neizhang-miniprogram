@@ -1,13 +1,18 @@
 """对话流式接口：通过 mock 流避免真实调用大模型。"""
 
+import asyncio
 import json
 import uuid
 
+from sqlalchemy import select
+
+from app.database import stream_with_db
+from app.models.transaction import Transaction
 from app.services.chat_service import (
     _confirmation_sse_from_propose,
     _extra_events_after_tool,
 )
-from app.tools.finance_tools import propose_transaction
+from app.tools.finance_tools import add_transaction, propose_transaction
 
 
 def _login(client):
@@ -17,7 +22,8 @@ def _login(client):
         json={"phone": phone, "name": "对话测试"},
     )
     assert r.status_code == 200
-    return r.json()["token"]
+    data = r.json()
+    return data["token"], data["user_id"], data["team_id"]
 
 
 async def _fake_chat_stream(team_id, user_id, user_message, db):
@@ -31,7 +37,7 @@ def test_chat_send_requires_auth(client):
 
 
 def test_chat_send_rejects_empty_message(client):
-    token = _login(client)
+    token, _, _ = _login(client)
     r = client.post(
         "/api/v1/chat/send",
         json={"message": "   "},
@@ -105,7 +111,7 @@ def test_propose_transaction_rejects_invalid_amount():
 
 
 def test_chat_confirm_unknown_proposal_streams_error(client):
-    token = _login(client)
+    token, _, _ = _login(client)
     with client.stream(
         "POST",
         "/api/v1/chat/confirm",
@@ -126,12 +132,50 @@ def test_chat_confirm_requires_auth(client):
     assert r.status_code == 401
 
 
+def test_stream_with_db_commits_writes(client):
+    """流式接口应在流结束后提交数据库写入。"""
+    _, user_id, team_id = _login(client)
+    amount = 88.5 + (uuid.uuid4().int % 1000) / 100.0
+
+    async def _run():
+        async def _factory(db):
+            result = await add_transaction(
+                team_id=team_id,
+                user_id=user_id,
+                tx_type="expense",
+                amount=amount,
+                category="测试",
+                db=db,
+            )
+            assert json.loads(result)["success"]
+            yield 'data: {"type":"message_stop"}\n\n'
+
+        body = []
+        async for chunk in stream_with_db(_factory):
+            body.append(chunk)
+
+        assert "message_stop" in "".join(body)
+
+        from app.database import async_session_factory
+
+        async with async_session_factory() as db:
+            rows = await db.execute(
+                select(Transaction).where(
+                    Transaction.team_id == team_id,
+                    Transaction.amount == amount,
+                )
+            )
+            assert rows.scalar_one_or_none() is not None
+
+    asyncio.run(_run())
+
+
 def test_chat_send_streams_when_mocked(client, monkeypatch):
     import app.routers.chat as chat_mod
 
     monkeypatch.setattr(chat_mod, "chat_stream", _fake_chat_stream)
 
-    token = _login(client)
+    token, _, _ = _login(client)
     with client.stream(
         "POST",
         "/api/v1/chat/send",
