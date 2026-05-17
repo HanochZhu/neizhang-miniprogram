@@ -3,7 +3,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from app.routers.auth import get_current_user
 from app.database import stream_with_db
-from app.services.chat_service import chat_stream, confirm_proposal_stream
+from app.services.chat_service import (
+    chat_stream,
+    confirm_duplicate_message_stream,
+    confirm_proposal_stream,
+)
 from app.services.image_analysis_service import analyze_image_stream
 
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
@@ -15,6 +19,11 @@ class ChatRequest(BaseModel):
 
 class ConfirmRequest(BaseModel):
     proposal_id: str
+    confirmed: bool = True
+
+
+class ConfirmDuplicateRequest(BaseModel):
+    message: str
     confirmed: bool = True
 
 
@@ -56,6 +65,46 @@ async def send_message(
             team_id=team_id,
             user_id=user_id,
             user_message=request.message.strip(),
+            db=db,
+        ):
+            yield chunk
+
+    return StreamingResponse(
+        stream_with_db(_factory),
+        media_type="text/event-stream",
+        headers=_sse_headers(),
+    )
+
+
+@router.post("/confirm-duplicate")
+async def confirm_duplicate_message(
+    request: ConfirmDuplicateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """用户确认或取消重复聊天消息的保存，确认后继续流式对话。"""
+    user_id = current_user.get("user_id")
+    team_id = current_user.get("team_id")
+
+    if not user_id or not team_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User or team not found. Please login first.",
+        )
+
+    if not request.message.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message cannot be empty",
+        )
+
+    message = request.message.strip()
+
+    async def _factory(db):
+        async for chunk in confirm_duplicate_message_stream(
+            user_message=message,
+            confirmed=request.confirmed,
+            team_id=team_id,
+            user_id=user_id,
             db=db,
         ):
             yield chunk

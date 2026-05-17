@@ -1,13 +1,18 @@
 import json
 import logging
-from typing import AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Optional
 
 from anthropic import AsyncAnthropic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.chat_message import ChatMessage
-from app.services.context_service import get_recent_messages
+from app.services.chat_tool_guard import check_add_transaction_allowed, make_tool_guard
+from app.services.context_service import (
+    append_user_message,
+    get_recent_messages,
+    is_duplicate_of_last_message,
+)
 from sqlalchemy import select
 
 from app.models.transaction_proposal import TransactionProposal
@@ -48,15 +53,17 @@ SYSTEM_PROMPT = (
     "   - 「早上」「上午」「下午」→ 设定对应日期范围即可（数据库不存储具体时间）\n"
     "4. 如果 query_transactions 返回「没有找到匹配的收支记录」，告诉用户目前没有相关记录，并建议用户调整搜索词。\n\n"
     "【记账规则】\n"
-    "1. 用户表述清晰、金额/类别/收支类型均无歧义时，使用 add_transaction 直接记账；"
-    "每次用户要求记一笔新的收支（即使与历史类似）都必须新增一条记录。\n"
-    "2. 只有以下情况才使用 propose_transaction（不会立即入账）："
-    "金额或类别需合理推测、日期不明确、用户语气犹豫或说「大概」「好像」等。\n"
-    "3. propose_transaction 的 reason 参数用一句话说明为何需要用户确认；"
-    "正文中必须说明「尚未入账，请在确认卡片中点击确认保存」。\n"
-    "4. 关键信息缺失（如不知道金额或收入/支出）时先简短追问，不要猜测后提案或口头声称已记账。\n"
-    "5. 禁止在未成功调用 add_transaction 之前，在回复里写「已记账」「已保存」「已记录」等表述。\n"
-    "6. add_transaction 工具返回 success 后，再用一句话向用户确认已记账（包含金额与类别）。"
+    "1. **仅根据「当前这一条用户消息」中明确写出的收支来记账**；"
+    "更早的聊天历史、助手过往回复、工具返回摘要仅供理解语境，**不得**从中挖掘多笔金额并批量调用 add_transaction。\n"
+    "2. 用户表述清晰、金额/类别/收支类型均在**当前消息**中无歧义时，使用 add_transaction；"
+    "同一句里有多笔明确金额时，最多按句中笔数分别入账。\n"
+    "3. 用户说「全部重新记录」「把上面的都记了」「补记之前说的」等时：**禁止**根据历史对话批量入账；"
+    "应先 query_transactions 说明库里已有记录，并引导用户在本条消息逐条列出要记的账，或一次记一笔。\n"
+    "4. 只有以下情况才使用 propose_transaction：金额或类别需推测、日期不明确、用户犹豫或说「大概」「好像」等。\n"
+    "5. propose_transaction 的 reason 用一句话说明需确认原因；正文须提示「尚未入账，请在确认卡片中确认保存」。\n"
+    "6. 关键信息缺失时先追问，不要猜测后入账或口头声称已记账。\n"
+    "7. 禁止在未成功调用 add_transaction 之前写「已记账」「已保存」「已记录」。\n"
+    "8. add_transaction 返回 success 后，再用一句话确认（含金额与类别）。"
 )
 
 TOOLS = [
@@ -98,7 +105,11 @@ TOOLS = [
     },
     {
         "name": "add_transaction",
-        "description": "在信息明确时直接添加一笔收支记录",
+        "description": (
+            "在信息明确时直接添加一笔收支记录。"
+            "仅针对用户「当前这条消息」里明确说出的那一笔；"
+            "不得根据更早聊天记录批量补记多笔。"
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -259,8 +270,18 @@ async def _execute_tool(
     team_id: int,
     user_id: int,
     db: AsyncSession,
+    tool_guard: Optional[dict[str, Any]] = None,
 ) -> str:
     """Execute a finance tool and return the result string."""
+    if tool_name == "add_transaction" and tool_guard is not None:
+        blocked = check_add_transaction_allowed(
+            tool_guard.get("user_message", ""),
+            tool_guard.get("add_count", 0),
+        )
+        if blocked:
+            return blocked
+        tool_guard["add_count"] = tool_guard.get("add_count", 0) + 1
+
     if tool_name == "propose_transaction":
         result = await propose_transaction(
             team_id=team_id,
@@ -321,13 +342,19 @@ async def _save_message(
     user_id: int,
     role: str,
     content: str,
+    *,
+    force: bool = False,
 ) -> None:
-    """Save a chat message to the database."""
+    """持久化消息；与库中最新一条相同且未 force 时跳过（由上层先征求用户确认）。"""
+    text = content.strip() if isinstance(content, str) else str(content)
+    if not force and await is_duplicate_of_last_message(team_id, role, text, db):
+        return
+
     msg = ChatMessage(
         team_id=team_id,
         user_id=user_id,
         role=role,
-        content=content,
+        content=text,
     )
     db.add(msg)
     await db.flush()
@@ -338,6 +365,8 @@ async def chat_stream(
     user_id: int,
     user_message: str,
     db: AsyncSession,
+    *,
+    force_save_user: bool = False,
 ) -> AsyncGenerator[str, None]:
     """SSE streaming chat with DeepSeek via the anthropic SDK.
 
@@ -356,13 +385,31 @@ async def chat_stream(
         )
         return
 
-    # Load recent history
-    history = await get_recent_messages(team_id, db, limit=20)
-    messages = list(history)
-    messages.append({"role": "user", "content": user_message})
+    text = user_message.strip()
 
-    # Save the user message to DB
-    await _save_message(db, team_id, user_id, "user", user_message)
+    if not force_save_user and await is_duplicate_of_last_message(
+        team_id, "user", text, db
+    ):
+        yield _format_sse(
+            {
+                "type": "duplicate_message_required",
+                "role": "user",
+                "content": text,
+                "message": "该消息与上一条聊天记录相同，是否仍要保存并继续对话？",
+            }
+        )
+        yield _format_sse({"type": "message_stop"})
+        return
+
+    # 历史只读：用于拼 LLM 上下文，不对 history 逐条写库
+    history = await get_recent_messages(team_id, db, limit=20)
+    messages = append_user_message(history, text)
+
+    await _save_message(
+        db, team_id, user_id, "user", text, force=force_save_user
+    )
+
+    tool_guard = make_tool_guard(text)
 
     # Buffer for the full assistant response content blocks across turns
     all_assistant_content: list = []
@@ -497,6 +544,7 @@ async def chat_stream(
                 team_id=team_id,
                 user_id=user_id,
                 db=db,
+                tool_guard=tool_guard,
             )
 
             if settings.chat_trace:
@@ -572,6 +620,41 @@ async def chat_stream(
 
     # Signal end of stream
     yield _format_sse({"type": "message_stop"})
+
+
+async def confirm_duplicate_message_stream(
+    user_message: str,
+    confirmed: bool,
+    team_id: int,
+    user_id: int,
+    db: AsyncSession,
+) -> AsyncGenerator[str, None]:
+    """用户确认或取消重复消息保存后，继续或结束对话。"""
+    text = user_message.strip()
+    if not text:
+        yield _format_sse({"type": "error", "content": "消息不能为空"})
+        yield _format_sse({"type": "message_stop"})
+        return
+
+    if not confirmed:
+        yield _format_sse(
+            {
+                "type": "duplicate_message_cancelled",
+                "content": "已取消，未重复保存该消息。",
+            }
+        )
+        yield _format_sse({"type": "message_stop"})
+        return
+
+    yield _format_sse({"type": "duplicate_message_confirmed"})
+    async for chunk in chat_stream(
+        team_id=team_id,
+        user_id=user_id,
+        user_message=text,
+        db=db,
+        force_save_user=True,
+    ):
+        yield chunk
 
 
 async def confirm_proposal_stream(

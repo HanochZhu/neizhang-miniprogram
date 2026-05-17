@@ -26,7 +26,7 @@ def _login(client):
     return data["token"], data["user_id"], data["team_id"]
 
 
-async def _fake_chat_stream(team_id, user_id, user_message, db):
+async def _fake_chat_stream(team_id, user_id, user_message, db, **kwargs):
     yield 'data: {"type":"text_delta","content":"测试回复"}\n\n'
     yield 'data: {"type":"message_stop"}\n\n'
 
@@ -168,6 +168,68 @@ def test_stream_with_db_commits_writes(client):
             assert rows.scalar_one_or_none() is not None
 
     asyncio.run(_run())
+
+
+def test_chat_send_duplicate_message_requires_confirm(client, monkeypatch):
+    import app.services.chat_service as chat_svc
+
+    called = {"chat": False}
+
+    async def _fake(*args, **kwargs):
+        called["chat"] = True
+        async for c in _fake_chat_stream(*args, **kwargs):
+            yield c
+
+    async def _is_dup(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(chat_svc, "chat_stream", _fake)
+    monkeypatch.setattr(chat_svc, "is_duplicate_of_last_message", _is_dup)
+
+    token, _, _ = _login(client)
+    with client.stream(
+        "POST",
+        "/api/v1/chat/send",
+        json={"message": "dup-msg"},
+        headers={"Authorization": f"Bearer {token}"},
+    ) as r:
+        assert r.status_code == 200
+        body = "".join(chunk.decode("utf-8") for chunk in r.iter_bytes())
+
+    assert "duplicate_message_required" in body
+    assert "message_stop" in body
+    assert called["chat"] is False
+
+
+def test_confirm_duplicate_cancelled(client):
+    token, _, _ = _login(client)
+    with client.stream(
+        "POST",
+        "/api/v1/chat/confirm-duplicate",
+        json={"message": "任意", "confirmed": False},
+        headers={"Authorization": f"Bearer {token}"},
+    ) as r:
+        body = "".join(chunk.decode("utf-8") for chunk in r.iter_bytes())
+    assert "duplicate_message_cancelled" in body
+    assert "message_stop" in body
+
+
+def test_confirm_duplicate_confirmed_streams_chat(client, monkeypatch):
+    import app.services.chat_service as chat_svc
+
+    monkeypatch.setattr(chat_svc, "chat_stream", _fake_chat_stream)
+
+    token, _, _ = _login(client)
+    with client.stream(
+        "POST",
+        "/api/v1/chat/confirm-duplicate",
+        json={"message": "继续对话", "confirmed": True},
+        headers={"Authorization": f"Bearer {token}"},
+    ) as r:
+        body = "".join(chunk.decode("utf-8") for chunk in r.iter_bytes())
+    assert "duplicate_message_confirmed" in body
+    assert "text_delta" in body
+    assert "message_stop" in body
 
 
 def test_chat_send_streams_when_mocked(client, monkeypatch):

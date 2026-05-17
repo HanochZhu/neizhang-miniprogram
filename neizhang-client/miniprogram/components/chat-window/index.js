@@ -288,6 +288,45 @@ Component({
       })
     },
 
+    _attachPendingDuplicateConfirm(info) {
+      const msgs = [...this.data.messages]
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === 'user' && !msgs[i].file) {
+          msgs[i] = {
+            ...msgs[i],
+            pendingDuplicateConfirm: {
+              message: info.message,
+              content: info.content,
+              status: 'pending'
+            }
+          }
+          break
+        }
+      }
+      this.setData({
+        messages: msgs,
+        streaming: false,
+        streamText: '',
+        currentAssistantMsg: null
+      })
+    },
+
+    _resolvePendingDuplicateConfirm(status, extraText) {
+      const msgs = [...this.data.messages]
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].pendingDuplicateConfirm) {
+          const msg = { ...msgs[i] }
+          msg.pendingDuplicateConfirm = { ...msg.pendingDuplicateConfirm, status }
+          if (extraText) {
+            msg.hint = extraText
+          }
+          msgs[i] = msg
+          break
+        }
+      }
+      this.setData({ messages: msgs })
+    },
+
     _resolvePendingConfirm(proposalId, status, extraText) {
       const msgs = [...this.data.messages]
       const idx = msgs.findIndex(
@@ -313,6 +352,26 @@ Component({
         case 'record_success':
           this._appendStreamText(event.content || '')
           this._notifyFinanceRefresh()
+          break
+
+        case 'duplicate_message_required':
+          this._attachPendingDuplicateConfirm({
+            message: event.message || '该消息与上一条聊天记录相同，是否仍要保存并继续对话？',
+            content: event.content || ''
+          })
+          this._sseMessageStop = true
+          break
+
+        case 'duplicate_message_confirmed':
+          this._resolvePendingDuplicateConfirm('confirmed')
+          break
+
+        case 'duplicate_message_cancelled':
+          this._resolvePendingDuplicateConfirm(
+            'cancelled',
+            event.content || '已取消，未重复保存该消息。'
+          )
+          this._sseMessageStop = true
           break
 
         case 'confirmation_required':
@@ -395,6 +454,26 @@ Component({
       this.streamConfirm(proposalId, confirmed)
     },
 
+    onConfirmDuplicate(e) {
+      const message = (e.currentTarget.dataset.message || '').trim()
+      const confirmed = e.currentTarget.dataset.confirmed === 'true' || e.currentTarget.dataset.confirmed === true
+      if (!message || this.data.streaming) return
+      this.streamConfirmDuplicate(message, confirmed)
+    },
+
+    streamConfirmDuplicate(message, confirmed) {
+      this._resetStreamState()
+      this.setData({ streaming: true, streamText: '', currentAssistantMsg: null })
+      return this._startSSEStream(
+        '/api/v1/chat/confirm-duplicate',
+        { message, confirmed },
+        { finalizeOnEnd: !confirmed }
+      ).catch((err) => {
+        wx.showToast({ title: err.message || '操作失败', icon: 'none' })
+        this.setData({ streaming: false })
+      })
+    },
+
     streamConfirm(proposalId, confirmed) {
       this.setData({ streaming: true, streamText: '', currentAssistantMsg: null })
       return this._startSSEStream(
@@ -411,6 +490,16 @@ Component({
 
       const last = this.data.messages[this.data.messages.length - 1]
       if (last && last.pendingConfirm && last.pendingConfirm.status === 'pending') {
+        this._streamFinalized = true
+        this._streamBuffer = ''
+        this.setData({ streaming: false, streamText: '', currentAssistantMsg: null })
+        return
+      }
+
+      const pendingDup = this.data.messages.find(
+        (m) => m.pendingDuplicateConfirm && m.pendingDuplicateConfirm.status === 'pending'
+      )
+      if (pendingDup) {
         this._streamFinalized = true
         this._streamBuffer = ''
         this.setData({ streaming: false, streamText: '', currentAssistantMsg: null })

@@ -22,6 +22,35 @@
         <view class="message user-message" wx:elif="{{item.role === 'user'}}">
           <view class="bubble user-bubble">
             <text>{{item.content}}</text>
+            <view
+              wx:if="{{item.pendingDuplicateConfirm && item.pendingDuplicateConfirm.status === 'pending'}}"
+              class="confirm-card"
+            >
+              <view class="confirm-title">重复消息</view>
+              <view class="confirm-reason">{{item.pendingDuplicateConfirm.message}}</view>
+              <view class="confirm-actions">
+                <view
+                  class="confirm-btn confirm-cancel"
+                  data-message="{{item.content}}"
+                  data-confirmed="{{false}}"
+                  bindtap="onConfirmDuplicate"
+                >不保存</view>
+                <view
+                  class="confirm-btn confirm-ok"
+                  data-message="{{item.content}}"
+                  data-confirmed="{{true}}"
+                  bindtap="onConfirmDuplicate"
+                >保存并继续</view>
+              </view>
+            </view>
+            <view
+              wx:elif="{{item.pendingDuplicateConfirm && item.pendingDuplicateConfirm.status === 'confirmed'}}"
+              class="confirm-status confirmed"
+            >已保存并继续对话</view>
+            <view
+              wx:elif="{{item.pendingDuplicateConfirm && item.pendingDuplicateConfirm.status === 'cancelled'}}"
+              class="confirm-status cancelled"
+            >未重复保存</view>
           </view>
         </view>
 
