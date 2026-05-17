@@ -228,6 +228,24 @@
   color: #fff;
 }
 
+/* Streaming loading animation on send button */
+.send-btn.streaming {
+  background: #1989fa;
+}
+
+.send-loading {
+  width: 28rpx;
+  height: 28rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: send-spin 0.8s linear infinite;
+}
+
+@keyframes send-spin {
+  to { transform: rotate(360deg); }
+}
+
 .text-input {
   flex: 1;
   width: 100%;

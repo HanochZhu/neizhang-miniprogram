@@ -154,8 +154,9 @@
         cursor-spacing="80"
         show-confirm-bar="{{false}}"
       />
-      <view class="send-btn {{inputText ? 'active' : ''}}" bindtap="sendMessage">
-        <text class="send-symbol">↑</text>
+      <view class="send-btn {{inputText ? 'active' : ''}} {{streaming ? 'streaming' : ''}}" bindtap="sendMessage">
+        <view class="send-loading" wx:if="{{streaming}}"></view>
+        <text class="send-symbol" wx:else>↑</text>
       </view>
     </view>
   </view>
