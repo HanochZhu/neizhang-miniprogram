@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import engine, Base
 import app.models  # noqa: F401 — register all ORM tables before create_all
-from app.routers import auth, chat, files, finance, admin
+from app.routers import auth, chat, files, finance, admin, teams
 
 
 @asynccontextmanager
@@ -53,6 +53,7 @@ app.include_router(chat.router)
 app.include_router(files.router)
 app.include_router(finance.router)
 app.include_router(admin.router)
+app.include_router(teams.router)
 
 
 @app.get("/health")
