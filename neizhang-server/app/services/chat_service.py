@@ -27,11 +27,28 @@ SYSTEM_PROMPT = (
     "你可以使用以下工具来帮助用户管理财务：\n"
     "- add_transaction: 在信息明确时直接添加一笔收支记录\n"
     "- propose_transaction: 当你推测出记账内容但不确定是否应保存时，发起待确认提案（不会立即入账）\n"
-    "- query_transactions: 查询收支记录\n"
+    "- query_transactions: 查询收支记录（支持 category 精确筛选 + keyword 模糊搜索）\n"
     "- get_summary: 获取财务汇总\n\n"
     "请始终使用中文回复。\n\n"
     "重要规则：\n"
-    "1. 用户表述清晰、金额/类别/收支类型均无歧义时，必须使用 add_transaction 直接记账；"
+    "【第一步：判断用户意图 —— 查询还是记账？】\n"
+    "先判断用户是想「查」还是想「记」：\n"
+    "- 查询意图（用 query_transactions / get_summary）：用户问「花了多少」「收入多少」「看看开支」「查询」「汇总」「还剩多少」「有没有记过」「统计」等 —— 只查询不记账。\n"
+    "- 记账意图（用 add_transaction / propose_transaction）：用户明确说「记一笔」「帮我记」「我花了XX」「收到了XX」等 —— 执行记账操作。\n"
+    "如果用户只说「吃饭花了多少钱」但没有说具体金额，这是在查询历史记录，不是记账！\n\n"
+    "【查询规则 —— 如何处理模糊查询】\n"
+    "用户经常使用模糊表达来查询，你需要正确选择参数：\n"
+    "1. 模糊类别 → 用 keyword 参数：用户说「酒水」「吃饭」「早餐」「打车」「咖啡」等非标准类别名时，使用 keyword 参数（会匹配 category 和 description 字段）。不要用 category（category 是精确匹配）。\n"
+    "2. 精确类别 → 用 category 参数：仅当用户说出系统中已有的标准类别名（如「餐饮」「交通」「工资」）时使用。\n"
+    "3. 时间表达转换：\n"
+    "   - 「今天」→ start_date=今天日期\n"
+    "   - 「昨天」→ start_date=昨天日期, end_date=今天日期\n"
+    "   - 「本周」→ start_date=本周一, end_date=下周一\n"
+    "   - 「这个月」→ start_date=本月1日, end_date=下月1日\n"
+    "   - 「早上」「上午」「下午」→ 设定对应日期范围即可（数据库不存储具体时间）\n"
+    "4. 如果 query_transactions 返回「没有找到匹配的收支记录」，告诉用户目前没有相关记录，并建议用户调整搜索词。\n\n"
+    "【记账规则】\n"
+    "1. 用户表述清晰、金额/类别/收支类型均无歧义时，使用 add_transaction 直接记账；"
     "每次用户要求记一笔新的收支（即使与历史类似）都必须新增一条记录。\n"
     "2. 只有以下情况才使用 propose_transaction（不会立即入账）："
     "金额或类别需合理推测、日期不明确、用户语气犹豫或说「大概」「好像」等。\n"
@@ -113,19 +130,22 @@ TOOLS = [
     },
     {
         "name": "query_transactions",
-        "description": "查询收支记录",
+        "description": "查询收支记录。用户模糊查询时优先使用 keyword 参数（如「酒水」「早上」等非精确类别的词）",
         "input_schema": {
             "type": "object",
             "properties": {
                 "start_date": {
                     "type": "string",
-                    "description": "开始日期 YYYY-MM-DD",
+                    "description": "开始日期 YYYY-MM-DD。相对时间如「今天」「昨天」「本周」需先换算为具体日期。",
                 },
                 "end_date": {
                     "type": "string",
                     "description": "结束日期 YYYY-MM-DD",
                 },
-                "category": {"type": "string", "description": "按类别筛选"},
+                "category": {
+                    "type": "string",
+                    "description": "按类别精确筛选。仅当用户明确说出已有类别名（如「餐饮」「交通」）时使用。",
+                },
                 "product": {
                     "type": "string",
                     "description": "按产品/项目筛选",
@@ -133,6 +153,11 @@ TOOLS = [
                 "type": {
                     "type": "string",
                     "enum": ["income", "expense"],
+                    "description": "类型：income=收入, expense=支出",
+                },
+                "keyword": {
+                    "type": "string",
+                    "description": "模糊搜索关键词，同时匹配类别和描述字段。用户说「酒水」「吃饭」「早餐」等模糊词时优先用此参数，不要用 category。",
                 },
             },
             "required": [],
@@ -274,6 +299,7 @@ async def _execute_tool(
             category=tool_input.get("category"),
             product=tool_input.get("product"),
             tx_type=tool_input.get("type"),
+            keyword=tool_input.get("keyword"),
             db=db,
         )
     elif tool_name == "get_summary":

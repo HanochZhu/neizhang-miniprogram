@@ -152,9 +152,13 @@ async def query_transactions(
     category: Optional[str] = None,
     product: Optional[str] = None,
     tx_type: Optional[str] = None,
+    keyword: Optional[str] = None,
     db: Optional[AsyncSession] = None,
 ) -> str:
     """Query transactions with optional filters.
+
+    category and product are exact matches.
+    keyword does a fuzzy (LIKE) search across category and description fields.
 
     Returns a formatted string with the matching records.
     """
@@ -177,6 +181,12 @@ async def query_transactions(
         query = query.where(Transaction.product == product)
     if tx_type:
         query = query.where(Transaction.type == tx_type)
+    if keyword:
+        like_pattern = f"%{keyword}%"
+        query = query.where(
+            Transaction.category.like(like_pattern)
+            | Transaction.description.like(like_pattern)
+        )
 
     query = query.order_by(Transaction.transaction_date.desc()).limit(50)
 
