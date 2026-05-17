@@ -17,7 +17,10 @@ Component({
     transactions: [],
     transactionCount: 0,
     transactionsReturned: 0,
-    loading: false
+    loading: false,
+    isAdmin: false,
+    editingId: null,
+    editForm: {}
   },
 
   observers: {
@@ -64,6 +67,8 @@ Component({
 
     /** 打开/切换到财务 Tab：锁定截止日为当前时刻并请求数据 */
     activateAndLoad() {
+      const userInfo = app.globalData.userInfo || {}
+      this.setData({ isAdmin: userInfo.role === 'admin' })
       const endDate = this._formatDate(new Date())
       this.setData({ queryEndDate: endDate }, () => {
         this.loadData()
@@ -115,6 +120,93 @@ Component({
       }
 
       return { start_date: startDate, end_date: endDate }
+    },
+
+    startEdit(e) {
+      const { id, type, amount, category, description, product, date } = e.currentTarget.dataset
+      this.setData({
+        editingId: id,
+        editForm: {
+          type: type || 'expense',
+          typeIdx: type === 'income' ? 0 : 1,
+          amount: String(amount || ''),
+          category: category || '',
+          description: description || '',
+          product: product || '',
+          transaction_date: date || ''
+        }
+      })
+    },
+
+    cancelEdit() {
+      this.setData({ editingId: null, editForm: {} })
+    },
+
+    onEditType(e) {
+      const idx = parseInt(e.detail.value)
+      const types = ['income', 'expense']
+      this.setData({ 'editForm.type': types[idx], 'editForm.typeIdx': idx })
+    },
+
+    onEditField(e) {
+      const field = e.currentTarget.dataset.field
+      this.setData({ [`editForm.${field}`]: e.detail.value })
+    },
+
+    async saveEdit() {
+      const { editingId, editForm } = this.data
+      if (!editingId) return
+
+      const type = editForm.type
+      const amount = parseFloat(editForm.amount)
+      if (isNaN(amount) || amount <= 0) {
+        wx.showToast({ title: '请输入有效金额', icon: 'none' })
+        return
+      }
+      if (!editForm.category.trim()) {
+        wx.showToast({ title: '请输入类别', icon: 'none' })
+        return
+      }
+
+      const body = {
+        type,
+        amount,
+        category: editForm.category.trim(),
+        description: editForm.description ? editForm.description.trim() : null,
+        product: editForm.product ? editForm.product.trim() : null,
+        transaction_date: editForm.transaction_date || null
+      }
+
+      try {
+        await api.put(`/api/v1/finance/transactions/${editingId}`, body)
+        wx.showToast({ title: '已更新', icon: 'success' })
+        this.setData({ editingId: null, editForm: {} })
+        this.loadData()
+        app.refreshFinanceData()
+      } catch (err) {
+        wx.showToast({ title: err.message || '更新失败', icon: 'none' })
+      }
+    },
+
+    async deleteTransaction(e) {
+      const { id, category, amount } = e.currentTarget.dataset
+      const confirmed = await new Promise((resolve) => {
+        wx.showModal({
+          title: '确认删除',
+          content: `确定要删除该笔记录吗？\n${category} ¥${amount}`,
+          success: (res) => { resolve(res.confirm) }
+        })
+      })
+      if (!confirmed) return
+
+      try {
+        await api.del(`/api/v1/finance/transactions/${id}`)
+        wx.showToast({ title: '已删除', icon: 'success' })
+        this.loadData()
+        app.refreshFinanceData()
+      } catch (err) {
+        wx.showToast({ title: err.message || '删除失败', icon: 'none' })
+      }
     },
 
     async loadData() {

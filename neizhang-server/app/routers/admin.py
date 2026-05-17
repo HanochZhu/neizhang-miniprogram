@@ -609,19 +609,39 @@ async def admin_regenerate_code(team_id: int, db: AsyncSession = Depends(get_db)
 
 @router.post("/teams/{team_id}/members/add")
 async def admin_add_member(
-    team_id: int, user_id: int = Form(...), db: AsyncSession = Depends(get_db),
+    team_id: int,
+    phone: str = Form(..., min_length=1, max_length=20),
+    name: str = Form(default="", max_length=50),
+    role: str = Form(default="member"),
+    db: AsyncSession = Depends(get_db),
 ):
+    if role not in ("admin", "member"):
+        role = "member"
+
     team_result = await db.execute(select(Team).where(Team.id == team_id))
     if team_result.scalar_one_or_none() is None:
         return RedirectResponse(url=f"/admin/teams?msg=团队不存在&msg_type=error", status_code=303)
-    user_result = await db.execute(select(User).where(User.id == user_id))
+
+    # Find user by phone or create a new one
+    user_result = await db.execute(select(User).where(User.phone == phone))
     user = user_result.scalar_one_or_none()
+
     if user is None:
-        return RedirectResponse(url=f"/admin/teams/{team_id}?msg=用户不存在&msg_type=error", status_code=303)
-    user.team_id = team_id
-    user.role = "member"
-    await db.flush()
-    return RedirectResponse(url=f"/admin/teams/{team_id}?msg=成员「{user.name or user_id}」已添加&msg_type=success", status_code=303)
+        user = User(phone=phone, name=name, role=role, team_id=team_id)
+        db.add(user)
+        await db.flush()
+        display = f"「{name or phone}」（新用户）"
+    else:
+        if name:
+            user.name = name
+        user.team_id = team_id
+        user.role = role
+        await db.flush()
+        display = f"「{user.name or phone}」"
+
+    return RedirectResponse(
+        url=f"/admin/teams/{team_id}?msg=成员{display}已添加&msg_type=success", status_code=303
+    )
 
 
 @router.post("/teams/{team_id}/members/{user_id}/update")
@@ -949,22 +969,33 @@ async def admin_team_detail(
         <form action="/admin/teams/{team.id}/members/add" method="post">
             <div class="form-row">
                 <div class="form-group">
-                    <label>用户 ID</label>
-                    <input type="number" name="user_id" placeholder="输入用户 ID" required style="min-width:140px;" />
+                    <label>手机号 *</label>
+                    <input type="text" name="phone" placeholder="输入手机号" maxlength="20" required style="min-width:140px;" />
+                </div>
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" name="name" placeholder="输入姓名" maxlength="50" style="min-width:120px;" />
+                </div>
+                <div class="form-group">
+                    <label>角色</label>
+                    <select name="role">
+                        <option value="member">成员</option>
+                        <option value="admin">管理员</option>
+                    </select>
                 </div>
     """
     if available_users:
         html += """
                 <div class="form-group">
-                    <label>或选择已有用户</label>
-                    <select onchange="this.form.user_id.value=this.value">
+                    <label>或快速选择已有用户</label>
+                    <select onchange="var p=this.selectedOptions[0].dataset; if(this.value){this.form.phone.value=p.phone; this.form.name.value=p.name;}">
                         <option value="">-- 请选择 --</option>
         """
         for u in available_users:
             label = f"#{u.id} {u.name or '(无名)'}"
-            if u.phone:
-                label += f" ({u.phone})"
-            html += f'<option value="{u.id}">{label}</option>\n'
+            phone = u.phone or ''
+            name = u.name or ''
+            html += f'<option value="{u.id}" data-phone="{phone}" data-name="{name}">{label}</option>\n'
         html += """
                     </select>
                 </div>

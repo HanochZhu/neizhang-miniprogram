@@ -76,7 +76,7 @@
         </text>
       </view>
       <view class="transaction-list">
-        <view class="transaction-item" wx:for="{{transactions}}" wx:key="id">
+        <view class="transaction-item" wx:for="{{transactions}}" wx:key="id" wx:if="{{editingId !== item.id}}">
           <view class="tx-left">
             <text class="tx-category">{{item.category}}</text>
             <text class="tx-desc">{{item.description || ''}}</text>
@@ -86,6 +86,31 @@
             <text class="tx-amount {{item.type === 'income' ? 'income' : 'expense'}}">
               {{item.type === 'income' ? '+' : '-'}}¥{{item.amount}}
             </text>
+            <view class="tx-edit" wx:if="{{isAdmin}}" bindtap="startEdit" data-id="{{item.id}}" data-type="{{item.type}}" data-amount="{{item.amount}}" data-category="{{item.category}}" data-description="{{item.description}}" data-product="{{item.product}}" data-date="{{item.transaction_date}}">✎</view>
+            <view class="tx-delete" wx:if="{{isAdmin}}" bindtap="deleteTransaction" data-id="{{item.id}}" data-category="{{item.category}}" data-amount="{{item.amount}}">✕</view>
+          </view>
+        </view>
+        <!-- Edit form row -->
+        <view class="edit-form" wx:if="{{editingId === item.id}}">
+          <view class="edit-row">
+            <picker mode="selector" range="{{['income','expense']}}" range-key="typeLabel" value="{{editForm.typeIdx}}" bindchange="onEditType">
+              <view class="edit-picker">{{editForm.type === 'income' ? '收入' : '支出'}}</view>
+            </picker>
+            <input class="edit-input number" type="digit" value="{{editForm.amount}}" bindinput="onEditField" data-field="amount" placeholder="金额"/>
+          </view>
+          <view class="edit-row">
+            <input class="edit-input" value="{{editForm.category}}" bindinput="onEditField" data-field="category" placeholder="类别"/>
+            <input class="edit-input" value="{{editForm.transaction_date}}" bindinput="onEditField" data-field="transaction_date" placeholder="日期 YYYY-MM-DD"/>
+          </view>
+          <view class="edit-row">
+            <input class="edit-input" value="{{editForm.product}}" bindinput="onEditField" data-field="product" placeholder="产品/项目"/>
+          </view>
+          <view class="edit-row">
+            <input class="edit-input" value="{{editForm.description}}" bindinput="onEditField" data-field="description" placeholder="备注"/>
+          </view>
+          <view class="edit-actions">
+            <view class="edit-btn cancel" bindtap="cancelEdit">取消</view>
+            <view class="edit-btn save" bindtap="saveEdit">保存</view>
           </view>
         </view>
       </view>

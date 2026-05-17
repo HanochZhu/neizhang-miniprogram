@@ -1,11 +1,14 @@
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.transaction import Transaction
+from app.models.user import User
 from app.routers.auth import get_current_user
 from app.utils.dates import parse_end_date_exclusive, parse_start_date
 
@@ -136,4 +139,125 @@ async def get_finance_summary(
         "transactions_returned": len(tx_list),
         "by_category": by_category,
         "transactions": tx_list,
+    }
+
+
+@router.delete("/transactions/{transaction_id}")
+async def delete_transaction(
+    transaction_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a transaction. Only team admins can do this."""
+    user_id = current_user.get("user_id")
+    team_id = current_user.get("team_id")
+
+    if not team_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Team not found"
+        )
+
+    # Check user is admin
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if user is None or user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有团队管理员可以删除记账数据",
+        )
+
+    # Find transaction and verify it belongs to the team
+    tx_result = await db.execute(
+        select(Transaction).where(Transaction.id == transaction_id)
+    )
+    tx = tx_result.scalar_one_or_none()
+    if tx is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="交易记录不存在",
+        )
+    if tx.team_id != team_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="无法删除其他团队的记账数据",
+        )
+
+    await db.delete(tx)
+    await db.flush()
+
+    return {"success": True, "message": "已删除"}
+
+
+class UpdateTransactionRequest(BaseModel):
+    type: Optional[str] = Field(default=None, pattern="^(income|expense)$")
+    amount: Optional[float] = Field(default=None, gt=0)
+    category: Optional[str] = Field(default=None, max_length=50)
+    description: Optional[str] = Field(default=None, max_length=500)
+    product: Optional[str] = Field(default=None, max_length=100)
+    transaction_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+
+@router.put("/transactions/{transaction_id}")
+async def update_transaction(
+    transaction_id: int,
+    request: UpdateTransactionRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a transaction. Only team admins can do this."""
+    user_id = current_user.get("user_id")
+    team_id = current_user.get("team_id")
+
+    if not team_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Team not found")
+
+    # Check user is admin
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one_or_none()
+    if user is None or user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有团队管理员可以修改记账数据",
+        )
+
+    # Find transaction and verify it belongs to the team
+    tx_result = await db.execute(
+        select(Transaction).where(Transaction.id == transaction_id)
+    )
+    tx = tx_result.scalar_one_or_none()
+    if tx is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="交易记录不存在")
+    if tx.team_id != team_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="无法修改其他团队的记账数据"
+        )
+
+    # Apply updates
+    if request.type is not None:
+        tx.type = request.type
+    if request.amount is not None:
+        tx.amount = request.amount
+    if request.category is not None:
+        tx.category = request.category
+    if request.description is not None:
+        tx.description = request.description
+    if request.product is not None:
+        tx.product = request.product
+    if request.transaction_date is not None:
+        tx.transaction_date = datetime.strptime(request.transaction_date, "%Y-%m-%d")
+
+    await db.flush()
+
+    return {
+        "success": True,
+        "message": "已更新",
+        "transaction": {
+            "id": tx.id,
+            "type": tx.type,
+            "amount": tx.amount,
+            "category": tx.category,
+            "description": tx.description,
+            "product": tx.product,
+            "transaction_date": tx.transaction_date.isoformat() if tx.transaction_date else None,
+        },
     }

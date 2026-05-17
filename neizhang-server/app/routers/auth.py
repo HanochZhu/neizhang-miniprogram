@@ -33,6 +33,7 @@ class LoginResponse(BaseModel):
     team_id: int
     open_id: str = ""
     is_new_user: bool = False
+    role: str = "member"
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -72,6 +73,7 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
             "user_id": user.id,
             "team_id": user.team_id or 0,
             "open_id": open_id,
+            "role": user.role or "member",
         }
     )
 
@@ -81,6 +83,7 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
         team_id=user.team_id or 0,
         open_id=open_id,
         is_new_user=is_new,
+        role=user.role or "member",
     )
 
 
@@ -101,6 +104,7 @@ async def phone_login(request: PhoneLoginRequest, db: AsyncSession = Depends(get
             "user_id": user.id,
             "team_id": user.team_id or 0,
             "phone": request.phone,
+            "role": user.role or "member",
         }
     )
 
@@ -109,6 +113,7 @@ async def phone_login(request: PhoneLoginRequest, db: AsyncSession = Depends(get
         user_id=user.id,
         team_id=user.team_id or 0,
         is_new_user=is_new,
+        role=user.role or "member",
     )
 
 

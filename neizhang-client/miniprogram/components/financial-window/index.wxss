@@ -178,6 +178,108 @@
   color: #ee0a24;
 }
 
+.tx-right {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.tx-delete {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #ccc;
+  border-radius: 50%;
+  background: #f5f5f5;
+  flex-shrink: 0;
+}
+
+.tx-delete:active {
+  background: #ee0a24;
+  color: #fff;
+}
+
+.tx-edit {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: #bbb;
+  border-radius: 50%;
+  background: #f5f5f5;
+  flex-shrink: 0;
+}
+
+.tx-edit:active {
+  background: #1989fa;
+  color: #fff;
+}
+
+.edit-form {
+  background: #fff;
+  border: 1px solid #1989fa;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 10rpx;
+}
+
+.edit-row {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.edit-input {
+  flex: 1;
+  padding: 12rpx 16rpx;
+  border: 1px solid #e5e5e5;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  background: #fafafa;
+}
+
+.edit-input.number {
+  max-width: 160rpx;
+}
+
+.edit-picker {
+  padding: 12rpx 24rpx;
+  border: 1px solid #e5e5e5;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  background: #fafafa;
+  min-width: 120rpx;
+  text-align: center;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.edit-btn {
+  padding: 12rpx 32rpx;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+}
+
+.edit-btn.cancel {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.edit-btn.save {
+  background: #1989fa;
+  color: #fff;
+}
+
 .empty-state {
   text-align: center;
   padding: 100rpx 0;

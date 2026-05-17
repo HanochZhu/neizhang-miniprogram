@@ -29,7 +29,7 @@ Page({
 
         try {
           const result = await auth.login(res.code)
-          app.setLogin(result.token, result.user || {})
+          app.setLogin(result.token, { user_id: result.user_id, team_id: result.team_id, role: result.role || 'member' })
           wx.showToast({ title: '登录成功', icon: 'success' })
           setTimeout(() => {
             wx.redirectTo({ url: '/pages/main/main' })
@@ -71,7 +71,7 @@ Page({
 
     try {
       const result = await auth.phoneLogin(phone, name.trim())
-      app.setLogin(result.token, result.user || {})
+      app.setLogin(result.token, { user_id: result.user_id, team_id: result.team_id, role: result.role || 'member' })
       wx.showToast({ title: '登录成功', icon: 'success' })
       setTimeout(() => {
         wx.redirectTo({ url: '/pages/main/main' })
