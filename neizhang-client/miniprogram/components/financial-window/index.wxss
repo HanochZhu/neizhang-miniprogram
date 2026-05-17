@@ -60,6 +60,14 @@
   color: #333;
 }
 
+.card-subtitle {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #999;
+  font-weight: normal;
+}
+
 .summary-grid {
   display: flex;
   gap: 20rpx;

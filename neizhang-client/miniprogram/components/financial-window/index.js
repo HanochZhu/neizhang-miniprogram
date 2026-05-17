@@ -15,6 +15,8 @@ Component({
     teamSummary: null,
     personalSummary: null,
     transactions: [],
+    transactionCount: 0,
+    transactionsReturned: 0,
     loading: false
   },
 
@@ -126,16 +128,20 @@ Component({
       this.setData({ loading: true })
 
       try {
+        const listParams = { ...dateRange, tx_limit: 200 }
         const [teamRes, personalRes] = await Promise.all([
-          api.get('/api/v1/finance/summary', { scope: 'team', ...dateRange }),
-          api.get('/api/v1/finance/summary', { scope: 'personal', ...dateRange })
+          api.get('/api/v1/finance/summary', { scope: 'team', ...listParams }),
+          api.get('/api/v1/finance/summary', { scope: 'personal', ...listParams })
         ])
 
+        const txList = teamRes.transactions || []
         app.globalData.financeStale = false
         this.setData({
           teamSummary: teamRes,
           personalSummary: personalRes,
-          transactions: (teamRes.transactions || []).slice(0, 20),
+          transactions: txList,
+          transactionCount: teamRes.transaction_count || 0,
+          transactionsReturned: teamRes.transactions_returned ?? txList.length,
           loading: false
         })
       } catch (err) {

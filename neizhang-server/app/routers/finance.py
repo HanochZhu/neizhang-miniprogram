@@ -17,6 +17,12 @@ async def get_finance_summary(
     scope: str = Query("team", description="范围: team 或 personal"),
     start_date: Optional[str] = Query(None, description="开始日期 YYYY-MM-DD"),
     end_date: Optional[str] = Query(None, description="结束日期 YYYY-MM-DD"),
+    tx_limit: int = Query(
+        100,
+        ge=1,
+        le=500,
+        description="交易记录列表返回条数上限（汇总统计仍含全部）",
+    ),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -93,12 +99,15 @@ async def get_finance_summary(
         for row in category_result.all()
     ]
 
-    # Recent transactions
+    # Recent transactions（列表有上限；收入/支出合计与 transaction_count 为区间内全部）
     tx_query = (
         select(Transaction)
         .where(*base_conditions)
-        .order_by(Transaction.transaction_date.desc())
-        .limit(20)
+        .order_by(
+            Transaction.transaction_date.desc(),
+            Transaction.id.desc(),
+        )
+        .limit(tx_limit)
     )
     tx_result = await db.execute(tx_query)
     transactions = tx_result.scalars().all()
@@ -123,6 +132,8 @@ async def get_finance_summary(
         "expense_total": expense_total,
         "balance": income_total - expense_total,
         "transaction_count": tx_count,
+        "transactions_limit": tx_limit,
+        "transactions_returned": len(tx_list),
         "by_category": by_category,
         "transactions": tx_list,
     }

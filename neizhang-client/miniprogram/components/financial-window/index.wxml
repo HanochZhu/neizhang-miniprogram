@@ -68,6 +68,12 @@
     <view class="summary-card" wx:if="{{transactions.length > 0}}">
       <view class="card-header">
         <text class="card-title">交易记录</text>
+        <text class="card-subtitle" wx:if="{{transactionCount > transactionsReturned}}">
+          共 {{transactionCount}} 笔，已显示最近 {{transactionsReturned}} 笔
+        </text>
+        <text class="card-subtitle" wx:elif="{{transactionCount > 0}}">
+          共 {{transactionCount}} 笔
+        </text>
       </view>
       <view class="transaction-list">
         <view class="transaction-item" wx:for="{{transactions}}" wx:key="id">

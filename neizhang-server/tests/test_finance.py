@@ -72,6 +72,44 @@ def test_finance_summary_with_token(client):
     assert data["transactions"] == []
 
 
+def test_finance_summary_respects_tx_limit(client):
+    token, user_id, team_id = _phone_login(client)
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    async def _insert_many():
+        async with async_session_factory() as db:
+            for i in range(25):
+                db.add(
+                    Transaction(
+                        team_id=team_id,
+                        user_id=user_id,
+                        type="expense",
+                        amount=10.0 + i,
+                        category="测试",
+                        transaction_date=datetime.now(),
+                    )
+                )
+            await db.commit()
+
+    asyncio.run(_insert_many())
+
+    r = client.get(
+        "/api/v1/finance/summary",
+        params={
+            "scope": "team",
+            "start_date": today,
+            "end_date": today,
+            "tx_limit": 10,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["transaction_count"] >= 25
+    assert data["transactions_returned"] == 10
+    assert len(data["transactions"]) == 10
+
+
 def test_finance_summary_invalid_date(client):
     token, _, _ = _phone_login(client)
     r = client.get(
