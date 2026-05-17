@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 from typing import Any, AsyncGenerator, Optional
 
 from anthropic import AsyncAnthropic
@@ -65,6 +66,14 @@ SYSTEM_PROMPT = (
     "7. 禁止在未成功调用 add_transaction 之前写「已记账」「已保存」「已记录」。\n"
     "8. add_transaction 返回 success 后，再用一句话确认（含金额与类别）。"
 )
+
+WEEKDAY_NAMES = ["一", "二", "三", "四", "五", "六", "日"]
+
+
+def _build_date_hint() -> str:
+    """告诉模型当前日期，让它能正确转换「今天」「本周」等时间表达。"""
+    now = datetime.now()
+    return f"\n\n当前日期：{now.strftime('%Y-%m-%d')}（周{WEEKDAY_NAMES[now.weekday()]}）。"
 
 TOOLS = [
     {
@@ -437,7 +446,7 @@ async def chat_stream(
         async with aclient.messages.stream(
             model=settings.deepseek_model,
             max_tokens=4096,
-            system=SYSTEM_PROMPT,
+            system=SYSTEM_PROMPT + _build_date_hint(),
             messages=messages,
             tools=TOOLS,
         ) as stream:
