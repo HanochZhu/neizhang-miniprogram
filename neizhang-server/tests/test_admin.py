@@ -25,7 +25,8 @@ def test_admin_html_dashboard(client):
     assert "text/html" in r.headers.get("content-type", "")
     assert "内账" in r.text
     assert "团队管理" in r.text
-    assert 'id="teams"' in r.text
+    assert "系统概览" in r.text
+    assert "快捷入口" in r.text
 
 
 def test_admin_stats_json(client):
@@ -82,8 +83,7 @@ def test_admin_transactions_table_scrollable_over_20(client):
 
     asyncio.run(_insert_many())
 
-    r = client.get("/admin")
+    r = client.get("/admin/transactions")
     assert r.status_code == 200
-    assert 'id="transactions"' in r.text
     assert "table-wrap scrollable" in r.text
-    assert "可滚动查看" in r.text
+    assert "管理后台测试" in r.text
