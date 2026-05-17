@@ -401,7 +401,7 @@ async def chat_stream(
         yield _format_sse({"type": "message_stop"})
         return
 
-    # 历史只读：用于拼 LLM 上下文，不对 history 逐条写库
+    # 历史只读（可由 CHAT_LOAD_HISTORY 关闭）：仅拼 LLM 上下文，不对 history 逐条写库
     history = await get_recent_messages(team_id, db, limit=20)
     messages = append_user_message(history, text)
 
@@ -517,8 +517,24 @@ async def chat_stream(
         # We have tool uses: add the assistant response to messages
         messages.append({"role": "assistant", "content": assistant_content_blocks})
 
-        # Execute each tool and add tool_result content
+        # API 要求：下一条 user 消息须包含本轮全部 tool_result（不能拆成多条 user）
+        tool_result_blocks: list[dict] = []
+        stop_tool_round = False
+
         for tool_use in tool_use_blocks:
+            if stop_tool_round:
+                tool_result_blocks.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tool_use.id,
+                        "content": json.dumps(
+                            {"error": "本轮已暂停，未执行该工具调用"},
+                            ensure_ascii=False,
+                        ),
+                    }
+                )
+                continue
+
             tool_input = tool_use.input
             if isinstance(tool_input, dict):
                 pass
@@ -555,6 +571,14 @@ async def chat_stream(
                     rpreview,
                 )
 
+            tool_result_blocks.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": result,
+                }
+            )
+
             yield _format_sse(
                 {
                     "type": "tool_result",
@@ -572,24 +596,10 @@ async def chat_stream(
                     awaiting_user_confirmation = True
                     if parsed.get("message"):
                         final_text_content = parsed["message"]
-                    break
+                    stop_tool_round = True
 
-            if awaiting_user_confirmation:
-                break
-
-            # Add tool result as a user message content block
-            messages.append(
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": tool_use.id,
-                            "content": result,
-                        }
-                    ],
-                }
-            )
+        if tool_result_blocks:
+            messages.append({"role": "user", "content": tool_result_blocks})
 
         if awaiting_user_confirmation:
             break

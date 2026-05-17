@@ -102,7 +102,41 @@ def test_is_duplicate_of_last_message(client):
     asyncio.run(_run())
 
 
-def test_get_recent_messages_deduped(client):
+def test_get_recent_messages_empty_when_load_history_disabled(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "chat_load_history", False)
+    r = client.post(
+        "/api/v1/auth/phone-login",
+        json={"phone": f"133{uuid.uuid4().int % 10**8:08d}", "name": "无历史"},
+    )
+    team_id, user_id = r.json()["team_id"], r.json()["user_id"]
+
+    async def _insert():
+        async with async_session_factory() as db:
+            db.add(
+                ChatMessage(
+                    team_id=team_id,
+                    user_id=user_id,
+                    role="user",
+                    content="不应出现在上下文",
+                )
+            )
+            await db.commit()
+
+    asyncio.run(_insert())
+
+    async def _load():
+        async with async_session_factory() as db:
+            return await get_recent_messages(team_id, db)
+
+    assert asyncio.run(_load()) == []
+
+
+def test_get_recent_messages_deduped(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "chat_load_history", True)
     r = client.post(
         "/api/v1/auth/phone-login",
         json={"phone": f"137{uuid.uuid4().int % 10**8:08d}", "name": "历史"},

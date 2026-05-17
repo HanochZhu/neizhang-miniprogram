@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # 为 true 时在服务端日志打印对话 ReAct 循环（迭代、工具名与入参摘要等）
     chat_trace: bool = False
 
+    # 为 true 时从 chat_messages 表加载最近对话作为大模型上下文；默认关闭
+    chat_load_history: bool = False
+
     if BaseSettings is not object:
         class Config:
             env_file = ".env"

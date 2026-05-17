@@ -3,6 +3,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.chat_message import ChatMessage
 
 
@@ -92,7 +93,11 @@ async def get_recent_messages(
     """Get the most recent chat messages for a team.
 
     Returns a list of dicts formatted for the anthropic messages API.
+    当 settings.chat_load_history 为 False 时返回空列表（不读库）。
     """
+    if not settings.chat_load_history:
+        return []
+
     result = await db.execute(
         select(ChatMessage)
         .where(ChatMessage.team_id == team_id)
