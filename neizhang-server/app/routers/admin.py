@@ -949,18 +949,27 @@ async def admin_team_detail(
         <form action="/admin/teams/{team.id}/members/add" method="post">
             <div class="form-row">
                 <div class="form-group">
-                    <label>选择用户</label>
-                    <select name="user_id" required>
-                        <option value="">-- 请选择 --</option>
+                    <label>用户 ID</label>
+                    <input type="number" name="user_id" placeholder="输入用户 ID" required style="min-width:140px;" />
+                </div>
     """
-    for u in available_users:
-        label = f"#{u.id} {u.name or '(无名)'}"
-        if u.phone:
-            label += f" ({u.phone})"
-        html += f'<option value="{u.id}">{label}</option>\n'
-    html += """
+    if available_users:
+        html += """
+                <div class="form-group">
+                    <label>或选择已有用户</label>
+                    <select onchange="this.form.user_id.value=this.value">
+                        <option value="">-- 请选择 --</option>
+        """
+        for u in available_users:
+            label = f"#{u.id} {u.name or '(无名)'}"
+            if u.phone:
+                label += f" ({u.phone})"
+            html += f'<option value="{u.id}">{label}</option>\n'
+        html += """
                     </select>
                 </div>
+        """
+    html += """
                 <div class="form-group">
                     <label>&nbsp;</label>
                     <button type="submit" class="btn btn-primary">添加到团队</button>
