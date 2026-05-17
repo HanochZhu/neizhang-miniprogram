@@ -24,3 +24,4 @@ neizhang-server/app/services/__pycache__/
 neizhang-server/tests/__pycache__/
 neizhang-server/app/tools/__pycache__/
 neizhang-server/app/utils/__pycache__/
+neizhang-server/app/__pycache__/

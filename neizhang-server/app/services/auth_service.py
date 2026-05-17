@@ -31,10 +31,8 @@ async def get_or_create_user_by_openid(db: AsyncSession, open_id: str) -> User:
         db.add(user)
         await db.flush()
 
-        # Create a default team for the new user
-        team = await create_default_team(db)
-        user.team_id = team.id
-        await db.flush()
+        # Create a default team for the new user (creator becomes admin)
+        await create_default_team(db, creator_user_id=user.id)
 
     return user
 
@@ -53,10 +51,8 @@ async def get_or_create_user_by_phone(db: AsyncSession, phone: str, name: str) -
         db.add(user)
         await db.flush()
 
-        # Create a default team for the new user
-        team = await create_default_team(db)
-        user.team_id = team.id
-        await db.flush()
+        # Create a default team for the new user (creator becomes admin)
+        await create_default_team(db, creator_user_id=user.id)
     else:
         # Update name if provided
         if name:
@@ -66,8 +62,12 @@ async def get_or_create_user_by_phone(db: AsyncSession, phone: str, name: str) -
     return user
 
 
-async def create_default_team(db: AsyncSession) -> Team:
-    """Create a new team with a random invite code."""
+async def create_default_team(db: AsyncSession, creator_user_id: int | None = None) -> Team:
+    """Create a new team with a random invite code.
+
+    If creator_user_id is provided, assign the team to that user and set their
+    role to "admin".
+    """
     invite_code = _generate_invite_code()
     team = Team(
         name="默认团队",
@@ -75,6 +75,15 @@ async def create_default_team(db: AsyncSession) -> Team:
     )
     db.add(team)
     await db.flush()
+
+    if creator_user_id is not None:
+        result = await db.execute(select(User).where(User.id == creator_user_id))
+        user = result.scalar_one_or_none()
+        if user is not None:
+            user.team_id = team.id
+            user.role = "admin"
+            await db.flush()
+
     return team
 
 
